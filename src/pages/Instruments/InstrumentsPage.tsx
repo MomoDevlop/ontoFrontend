@@ -49,6 +49,8 @@ import {
   Timeline,
   AccountTree,
   Close,
+  ArrowForward,
+  ArrowBack,
 } from '@mui/icons-material';
 import LoadingSpinner from '../../components/Common/LoadingSpinner';
 import ErrorMessage from '../../components/Common/ErrorMessage';
@@ -112,6 +114,48 @@ const InstrumentsPage: React.FC = () => {
   const [showRelations, setShowRelations] = useState(false);
   const [relationsLoading, setRelationsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  /**
+   * Get display name for an entity based on its properties
+   */
+  const getEntityDisplayName = (entity: any): string => {
+    if (!entity) return 'Entité inconnue';
+    
+    // Try different name properties based on entity type
+    return entity.nomInstrument || 
+           entity.nomFamille || 
+           entity.nomGroupe || 
+           entity.nomLocalite || 
+           entity.nomMateriau || 
+           entity.nomTechnique || 
+           entity.nomArtisan || 
+           entity.nomPatrimoine ||
+           entity.nomRythme ||
+           entity.descriptionTimbre ||
+           entity.nom ||
+           `Entité ${entity.id}`;
+  };
+
+  /**
+   * Get additional details for an entity
+   */
+  const getEntityDetails = (entity: any): string => {
+    if (!entity) return '';
+    
+    const details = [];
+    if (entity.description) details.push(entity.description);
+    if (entity.descriptionFamille) details.push(entity.descriptionFamille);
+    if (entity.langue) details.push(`Langue: ${entity.langue}`);
+    if (entity.coordonnees) details.push(`Coord: ${entity.coordonnees}`);
+    if (entity.type) details.push(`Type: ${entity.type}`);
+    if (entity.specialite) details.push(`Spécialité: ${entity.specialite}`);
+    if (entity.anneesExperience) details.push(`Exp: ${entity.anneesExperience} ans`);
+    if (entity.tempoBPM) details.push(`Tempo: ${entity.tempoBPM} BPM`);
+    if (entity.frequence) details.push(`Freq: ${entity.frequence} Hz`);
+    if (entity.intensite) details.push(`Int: ${entity.intensite}`);
+    
+    return details.slice(0, 2).join(' | ') || 'Aucun détail disponible';
+  };
 
   /**
    * Load instruments data
@@ -301,10 +345,27 @@ const InstrumentsPage: React.FC = () => {
   const loadInstrumentRelations = async (instrumentId: number) => {
     setRelationsLoading(true);
     try {
-      // Use the relations API to get relations for this instrument
-      const relationsResponse = await relationsApi.getForEntity(`instrument_${instrumentId}`);
+      console.log('Loading relations for instrument ID:', instrumentId);
+      
+      // Based on the API test, we know that the entity ID should just be the numeric ID
+      const relationsResponse = await relationsApi.getForEntity(`${instrumentId}`);
+      console.log('API Response:', relationsResponse);
+      
       if (relationsResponse.success && relationsResponse.data) {
-        setRelations(relationsResponse.data.relations || []);
+        const data = relationsResponse.data;
+        let allRelations: any[] = [];
+        
+        // The API returns relations in the format: { relations: { incoming: [], outgoing: [] } }
+        if (data.relations) {
+          const incoming = data.relations.incoming || [];
+          const outgoing = data.relations.outgoing || [];
+          
+          // The relations already come with direction and proper entity info
+          allRelations = [...incoming, ...outgoing];
+        }
+        
+        console.log('Processed relations:', allRelations);
+        setRelations(allRelations);
       } else {
         setRelations([]);
         console.warn('No relations found for instrument:', instrumentId);
@@ -886,23 +947,43 @@ const InstrumentsPage: React.FC = () => {
                     >
                       <CardContent sx={{ py: 2 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', color: relation.direction === 'incoming' ? 'success.main' : 'info.main' }}>
+                            {relation.direction === 'incoming' ? <ArrowBack /> : <ArrowForward />}
+                          </Box>
                           <Box sx={{ flex: 1 }}>
-                            <Typography variant="subtitle1" gutterBottom>
-                              <strong>{relation.sourceLabel || 'Entité source'}</strong>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                              <Typography variant="subtitle1">
+                                <strong>{relation.sourceLabel || (relation.direction === 'outgoing' ? selectedInstrument?.nomInstrument : getEntityDisplayName(relation.entity))}</strong>
+                              </Typography>
                               <Chip 
-                                label={relation.relationType || 'relation'} 
+                                label={relation.type || 'relation'} 
                                 size="small" 
                                 color="primary" 
                                 sx={{ mx: 1 }}
                               />
-                              <strong>{relation.targetLabel || 'Entité cible'}</strong>
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              Type: {relation.sourceType || 'N/A'} → {relation.targetType || 'N/A'}
-                            </Typography>
-                            {relation.properties && (
-                              <Typography variant="caption" color="text.secondary">
-                                Propriétés: {JSON.stringify(relation.properties)}
+                              <Typography variant="subtitle1">
+                                <strong>{relation.targetLabel || (relation.direction === 'incoming' ? selectedInstrument?.nomInstrument : getEntityDisplayName(relation.entity))}</strong>
+                              </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                              <Chip
+                                label={relation.direction === 'incoming' ? 'Entrant' : 'Sortant'}
+                                size="small"
+                                color={relation.direction === 'incoming' ? 'success' : 'info'}
+                                variant="outlined"
+                              />
+                              {relation.entityLabels && relation.entityLabels.length > 0 && (
+                                <Chip
+                                  label={relation.entityLabels.join(', ')}
+                                  size="small"
+                                  color="secondary"
+                                  variant="outlined"
+                                />
+                              )}
+                            </Box>
+                            {relation.entity && (
+                              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                ID: {relation.entity.id} | {getEntityDetails(relation.entity)}
                               </Typography>
                             )}
                           </Box>
