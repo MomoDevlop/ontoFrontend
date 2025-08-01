@@ -41,7 +41,7 @@ apiClient.interceptors.response.use(
         data: {
           success: false,
           error: 'Resource not found',
-          data: null
+          data: undefined
         }
       });
     }
@@ -52,7 +52,7 @@ apiClient.interceptors.response.use(
 // Common interfaces
 export interface ApiResponse<T = any> {
   success: boolean;
-  data: T;
+  data: T | undefined;
   error?: string;
   message?: string;
 }
@@ -250,7 +250,7 @@ function createCrudService<T>(endpoint: string): CrudService<T> {
         return {
           success: false,
           error: error.message || `Failed to fetch ${endpoint}/${id}`,
-          data: null
+          data: undefined
         };
       }
     },
@@ -264,7 +264,7 @@ function createCrudService<T>(endpoint: string): CrudService<T> {
         return {
           success: false,
           error: error.response?.data?.message || error.message || `Failed to create ${endpoint}`,
-          data: null
+          data: undefined
         };
       }
     },
@@ -278,7 +278,7 @@ function createCrudService<T>(endpoint: string): CrudService<T> {
         return {
           success: false,
           error: error.response?.data?.message || error.message || `Failed to update ${endpoint}/${id}`,
-          data: null
+          data: undefined
         };
       }
     },
@@ -292,7 +292,7 @@ function createCrudService<T>(endpoint: string): CrudService<T> {
         return {
           success: false,
           error: error.response?.data?.message || error.message || `Failed to delete ${endpoint}/${id}`,
-          data: null
+          data: undefined
         };
       }
     },
@@ -306,7 +306,7 @@ function createCrudService<T>(endpoint: string): CrudService<T> {
         return {
           success: false,
           error: error.message || `Failed to fetch ${endpoint}/statistics`,
-          data: null
+          data: undefined
         };
       }
     },
@@ -355,7 +355,7 @@ export const relationsApi = {
       return {
         success: false,
         error: error.message || `Failed to fetch relations for entity ${entityId}`,
-        data: null
+        data: undefined
       };
     }
   },
@@ -399,7 +399,7 @@ export const relationsApi = {
       return {
         success: false,
         error: error.message || 'Failed to fetch relation statistics',
-        data: null
+        data: undefined
       };
     }
   },
@@ -413,7 +413,7 @@ export const relationsApi = {
       return {
         success: false,
         error: error.response?.data?.message || error.message || 'Failed to create relation',
-        data: null
+        data: undefined
       };
     }
   },
@@ -429,7 +429,7 @@ export const relationsApi = {
       return {
         success: false,
         error: error.response?.data?.message || error.message || 'Failed to delete relation',
-        data: null
+        data: undefined
       };
     }
   },
@@ -443,7 +443,7 @@ export const relationsApi = {
       return {
         success: false,
         error: error.response?.data?.message || error.message || 'Failed to validate relation',
-        data: null
+        data: undefined
       };
     }
   },
@@ -457,7 +457,7 @@ export const relationsApi = {
       return {
         success: false,
         error: error.response?.data?.message || error.message || 'Failed to fetch ontology structure',
-        data: null
+        data: undefined
       };
     }
   },
@@ -491,8 +491,7 @@ export const searchApi = {
       if (response.data.success) {
         return {
           success: true,
-          data: response.data.data.allResults || [],
-          totalResults: response.data.data.totalResults || 0
+          data: response.data.data?.allResults || []
         };
       } else {
         return {
@@ -549,8 +548,7 @@ export const searchApi = {
       if (response.data.success) {
         return {
           success: true,
-          data: response.data.data.patterns || [],
-          count: response.data.data.count || 0
+          data: response.data.data?.patterns || []
         };
       } else {
         return {
@@ -572,11 +570,10 @@ export const searchApi = {
   async centrality(): Promise<ApiResponse<any[]>> {
     try {
       const response: AxiosResponse<ApiResponse<{centralityAnalysis: any[], count: number}>> = await apiClient.get('/search/centrality');
-      if (response.data.success) {
+      if (response.data.success && response.data.data) {
         return {
           success: true,
-          data: response.data.data.centralityAnalysis || [],
-          count: response.data.data.count || 0
+          data: response.data.data.centralityAnalysis || []
         };
       } else {
         return {
@@ -607,7 +604,7 @@ export const healthApi = {
       return {
         success: false,
         error: error.message || 'Failed to check health',
-        data: null
+        data: undefined
       };
     }
   },
@@ -621,7 +618,7 @@ export const healthApi = {
       return {
         success: false,
         error: error.message || 'Failed to check database health',
-        data: null
+        data: undefined
       };
     }
   },
