@@ -217,20 +217,54 @@ const Dashboard: React.FC = () => {
   };
 
   /**
-   * Handle search result selection
+   * Handle search result selection - Generic implementation for all entity types
    */
   const handleSearchResultSelect = (result: SearchResult) => {
-    // Navigate to the appropriate page based on result type
-    const pathMap: Record<string, string> = {
+    console.log('Selected search result:', result);
+    
+    // Comprehensive mapping of all entity types to their routes
+    const entityRouteMap: Record<string, string> = {
+      // Main entities
       'Instrument': '/instruments',
-      'Famille': '/familles',
+      'Famille': '/familles', 
       'GroupeEthnique': '/groupes-ethniques',
       'Localite': '/localites',
+      'Materiau': '/materiaux',
+      'Timbre': '/timbres',
+      'TechniqueDeJeu': '/techniques',
       'Artisan': '/artisans',
+      'PatrimoineCulturel': '/patrimoines',
+      
+      // Alternative naming variations that might come from the API
+      'Familles': '/familles',
+      'GroupesEthniques': '/groupes-ethniques', 
+      'Localites': '/localites',
+      'Materiaux': '/materiaux',
+      'Timbres': '/timbres',
+      'Techniques': '/techniques',
+      'TechniquesDeJeu': '/techniques',
+      'Artisans': '/artisans',
+      'Patrimoines': '/patrimoines',
+      'PatrimoinesCulturels': '/patrimoines',
     };
 
-    const path = pathMap[result.type] || '/search';
-    navigate(path);
+    // Determine the route based on result type or labels
+    const resultType = result.type || (result.labels && result.labels[0]);
+    const route = entityRouteMap[resultType];
+    
+    if (route && result.entity?.id) {
+      // Navigate to the entity page with ID and action parameters
+      console.log(`Navigating to: ${route}?id=${result.entity.id}&action=detail`);
+      navigate(`${route}?id=${result.entity.id}&action=detail`);
+    } else if (route) {
+      // Navigate to the entity page without specific ID
+      console.log(`Navigating to: ${route}`);
+      navigate(route);
+    } else {
+      // Fallback to search page with the query
+      console.log('Fallback to search page');
+      navigate(`/search?q=${encodeURIComponent(result.name)}`);
+    }
   };
 
   /**

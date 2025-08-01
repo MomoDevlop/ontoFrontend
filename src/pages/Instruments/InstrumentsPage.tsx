@@ -6,6 +6,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+import useEntityUrlNavigation from '../../hooks/useEntityUrlNavigation';
 import {
   Box,
   Typography,
@@ -84,6 +86,7 @@ interface FormErrors {
  */
 // @ts-ignore
 const InstrumentsPage: React.FC = () => {
+  const location = useLocation();
   const [instruments, setInstruments] = useState<Instrument[]>([]);
   const [familles, setFamilles] = useState<Famille[]>([]);
   const [loading, setLoading] = useState(true);
@@ -113,6 +116,7 @@ const InstrumentsPage: React.FC = () => {
   const [relations, setRelations] = useState<any[]>([]);
   const [showRelations, setShowRelations] = useState(false);
   const [relationsLoading, setRelationsLoading] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   /**
@@ -164,6 +168,42 @@ const InstrumentsPage: React.FC = () => {
     loadInstruments();
     loadFamilles();
   }, [page, rowsPerPage, searchQuery, selectedFamily]);
+
+  /**
+   * Handle URL parameters for direct navigation to instrument details using custom hook
+   */
+  useEntityUrlNavigation({
+    getEntityById: instrumentsApi.getById,
+    onEntityLoaded: (instrument: Instrument) => {
+      console.log('InstrumentsPage: onEntityLoaded called with:', instrument);
+      setSelectedInstrument(instrument);
+      
+      // Get action from URL to decide which dialog to open
+      const searchParams = new URLSearchParams(location.search);
+      const action = searchParams.get('action');
+      
+      // Use setTimeout to ensure this happens after other useEffects
+      setTimeout(() => {
+        if (action === 'detail') {
+          setShowDetail(true); // Open the detail dialog
+          console.log('InstrumentsPage: showDetail set to true (delayed)');
+        } else if (action === 'view') {
+          setShowRelations(true); // Open the relations dialog
+          console.log('InstrumentsPage: showRelations set to true (delayed)');
+        }
+      }, 100);
+    },
+    onAdditionalAction: (instrument: Instrument, instrumentId: number) => {
+      console.log('InstrumentsPage: onAdditionalAction called for instrument ID:', instrumentId);
+      const searchParams = new URLSearchParams(location.search);
+      const action = searchParams.get('action');
+      
+      // Only load relations if action is 'view' (relations view)
+      if (action === 'view') {
+        loadInstrumentRelations(instrumentId);
+      }
+    },
+  });
 
   /**
    * Load instruments with filters and pagination
@@ -1001,6 +1041,90 @@ const InstrumentsPage: React.FC = () => {
             {relations.length} relation{relations.length !== 1 ? 's' : ''} trouvée{relations.length !== 1 ? 's' : ''}
           </Typography>
           <Button onClick={() => setShowRelations(false)} variant="outlined">
+            Fermer
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Detail Dialog */}
+      <Dialog
+        open={showDetail}
+        onClose={() => setShowDetail(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: { minHeight: '400px' }
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Visibility color="primary" />
+            <Typography variant="h6">
+              Détails - {selectedInstrument?.nomInstrument}
+            </Typography>
+          </Box>
+          <IconButton onClick={() => setShowDetail(false)} size="small">
+            <Close />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          {selectedInstrument ? (
+            <Box>
+              <Typography variant="h6" gutterBottom>
+                {selectedInstrument.nomInstrument}
+              </Typography>
+              
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    <strong>ID:</strong> {selectedInstrument.id}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    <strong>Année de création:</strong> {selectedInstrument.anneeCreation || 'Non spécifiée'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="body2" color="text.secondary">
+                    <strong>Description:</strong>
+                  </Typography>
+                  <Typography variant="body1" sx={{ mt: 1 }}>
+                    {selectedInstrument.description || 'Aucune description disponible'}
+                  </Typography>
+                </Grid>
+              </Grid>
+              
+              <Box sx={{ mt: 3, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                <Button
+                  variant="outlined"
+                  startIcon={<Timeline />}
+                  onClick={() => {
+                    setShowDetail(false);
+                    setShowRelations(true);
+                    loadInstrumentRelations(selectedInstrument.id);
+                  }}
+                >
+                  Voir les relations
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<Edit />}
+                  onClick={() => {
+                    setShowDetail(false);
+                    handleEdit(selectedInstrument);
+                  }}
+                >
+                  Modifier
+                </Button>
+              </Box>
+            </Box>
+          ) : (
+            <Typography>Aucun instrument sélectionné</Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowDetail(false)} variant="outlined">
             Fermer
           </Button>
         </DialogActions>

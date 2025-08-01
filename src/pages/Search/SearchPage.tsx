@@ -37,12 +37,16 @@ import {
   LocationOn,
   Timeline,
   TrendingUp,
-  MusicNote,
+  MusicNote,   
   Language,
   Category,
   AccountBalance,
+  Build,
+  Palette,
+  TouchApp,
+  Person,
 } from '@mui/icons-material';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import LoadingSpinner from '../../components/Common/LoadingSpinner';
 import ErrorMessage from '../../components/Common/ErrorMessage';
 import SearchBar from '../../components/Common/SearchBar';
@@ -85,6 +89,10 @@ const SearchResultItem: React.FC<SearchResultItemProps> = ({ result, onClick }) 
       'GroupeEthnique': <Language color="success" />,
       'Localite': <LocationOn color="info" />,
       'PatrimoineCulturel': <AccountBalance color="warning" />,
+      'Materiau': <Build color="inherit" />,
+      'Timbre': <Palette color="inherit" />,
+      'TechniqueDeJeu': <TouchApp color="inherit" />,
+      'Artisan': <Person color="inherit" />,
     };
     return icons[type] || <Search />;
   };
@@ -164,6 +172,7 @@ const SearchResultItem: React.FC<SearchResultItemProps> = ({ result, onClick }) 
  */
 const SearchPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -360,11 +369,54 @@ const SearchPage: React.FC = () => {
   };
 
   /**
-   * Handle search result selection
+   * Handle search result selection - Navigate to entity detail page
    */
   const handleResultSelect = (result: SearchResult) => {
-    console.log('Selected result:', result);
-    // You can navigate to a detailed view or show more information
+    console.log('Selected search result:', result);
+    
+    // Comprehensive mapping of all entity types to their routes
+    const entityRouteMap: Record<string, string> = {
+      // Main entities
+      'Instrument': '/instruments',
+      'Famille': '/familles', 
+      'GroupeEthnique': '/groupes-ethniques',
+      'Localite': '/localites',
+      'Materiau': '/materiaux',
+      'Timbre': '/timbres',
+      'TechniqueDeJeu': '/techniques',
+      'Artisan': '/artisans',
+      'PatrimoineCulturel': '/patrimoines',
+      
+      // Alternative naming variations
+      'Familles': '/familles',
+      'GroupesEthniques': '/groupes-ethniques', 
+      'Localites': '/localites',
+      'Materiaux': '/materiaux',
+      'Timbres': '/timbres',
+      'Techniques': '/techniques',
+      'TechniquesDeJeu': '/techniques',
+      'Artisans': '/artisans',
+      'Patrimoines': '/patrimoines',
+      'PatrimoinesCulturels': '/patrimoines',
+    };
+
+    // Determine the route based on result type or labels
+    const resultType = result.type || (result.labels && result.labels[0]);
+    const route = entityRouteMap[resultType];
+    
+    if (route && result.entity?.id) {
+      // Navigate to the entity page with ID and action parameters
+      console.log(`Navigating to: ${route}?id=${result.entity.id}&action=view`);
+      navigate(`${route}?id=${result.entity.id}&action=view`);
+    } else if (route) {
+      // Navigate to the entity page without specific ID
+      console.log(`Navigating to: ${route}`);
+      navigate(route);
+    } else {
+      // Fallback: show more info in current page or navigate to search
+      console.log('No specific route found, showing details in place');
+      // Could open a modal or expand the result card here
+    }
   };
 
   return (
@@ -408,12 +460,13 @@ const SearchPage: React.FC = () => {
               placeholder="Rechercher dans toute l'ontologie..."
               initialValue={globalQuery}
               fullWidth
-              enableAutocomplete={false}
+              enableAutocomplete={true}
               onSearch={(query) => {
                 setGlobalQuery(query);
                 performGlobalSearch(query);
                 setSearchParams(query ? { q: query } : {});
               }}
+              onResultSelect={handleResultSelect}
             />
           </Box>
 
@@ -553,6 +606,11 @@ const SearchPage: React.FC = () => {
                         <MenuItem value="Famille">Famille</MenuItem>
                         <MenuItem value="GroupeEthnique">Groupe Ethnique</MenuItem>
                         <MenuItem value="Localite">Localité</MenuItem>
+                        <MenuItem value="Materiau">Matériau</MenuItem>
+                        <MenuItem value="Timbre">Timbre</MenuItem>
+                        <MenuItem value="TechniqueDeJeu">Technique de Jeu</MenuItem>
+                        <MenuItem value="Artisan">Artisan</MenuItem>
+                        <MenuItem value="PatrimoineCulturel">Patrimoine Culturel</MenuItem>
                       </Select>
                     </FormControl>
                   </Grid>
