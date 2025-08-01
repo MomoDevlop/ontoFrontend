@@ -6,7 +6,7 @@ Une application React TypeScript moderne pour explorer et gérer l'ontologie des
 
 ### 🏠 **Dashboard**
 - Vue d'ensemble des statistiques du système
-- Recherche rapide avec auto-complétion
+- Recherche rapide
 - Vérification de l'état du système (API + Base de données)
 - Accès rapide aux fonctionnalités principales
 
@@ -24,11 +24,6 @@ Une application React TypeScript moderne pour explorer et gérer l'ontologie des
 - Formulaires de création/modification avec validation
 - Vue détaillée des instruments
 
-### 🎨 **Interface Utilisateur**
-- Design Material-UI moderne et responsive
-- Navigation latérale avec icônes expressives
-- Thème cohérent avec couleurs personnalisées
-- Composants réutilisables et bien documentés
 
 ## 🚀 Installation et Démarrage
 
@@ -127,17 +122,14 @@ Le fichier `services/api.ts` fournit :
 - ✅ **Groupes Ethniques** - Traditions musicales
 - ✅ **Localités** - Géolocalisation
 - ✅ **Relations** - Liens sémantiques
-- ✅ **Recherche** - Tous types de recherche avancée
+- ✅ **Recherche** - Tous types de recherche avancée (pas encore finalisee)
 
 ## 🔮 Pages Implémentées
 
 ### ✅ Complètement Implémentées
 1. **Dashboard** - Vue d'ensemble avec statistiques et recherche
-2. **Recherche** - 5 types de recherche avancée
-3. **Instruments** - CRUD complet avec filtres
+2. **Instruments** - CRUD complet avec filtres
 
-### 📋 Pages Placeholder
-Les autres pages (Familles, Groupes Ethniques, etc.) affichent des messages informatifs. Elles peuvent être facilement développées en suivant le modèle de la page Instruments.
 
 ## 🌟 Fonctionnalités Avancées
 
@@ -174,22 +166,4 @@ Les autres pages (Familles, Groupes Ethniques, etc.) affichent des messages info
 3. **Annotations collaboratives** sur les instruments
 4. **Recommandations ML** basées sur l'utilisation
 5. **API GraphQL** pour optimiser les requêtes
-
-## 🤝 Contribution
-
-### Standards de Code
-- **TypeScript strict** activé
-- **Commentaires JSDoc** pour tous les composants
-- **Props interfaces** bien définies
-- **Error boundaries** pour la gestion d'erreurs
-- **Accessibility** (ARIA) considérée
-
-### Architecture
-- **Composants fonctionnels** avec Hooks
-- **Séparation des responsabilités** claire
-- **Services réutilisables** pour l'API
-- **Thème centralisé** et configurable
-
 ---
-
-🎵 **Une interface moderne pour explorer la richesse musicale mondiale** 🌍
