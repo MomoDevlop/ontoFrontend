@@ -31,6 +31,12 @@ import {
   MenuItem,
   Divider,
   Alert,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
 } from '@mui/material';
 import {
   Search,
@@ -143,6 +149,12 @@ const SearchResultItem: React.FC<SearchResultItemProps> = ({ result, onClick }) 
         
         {/* Propriétés spécifiques selon le type */}
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+          {result.entity?.distance && (
+            <Chip size="small" label={`Distance: ${result.entity.distance.toFixed(1)} km`} variant="outlined" color="info" />
+          )}
+          {result.entity?.nomLocalite && (
+            <Chip size="small" label={`Localité: ${result.entity.nomLocalite}`} variant="outlined" />
+          )}
           {result.entity?.anneeCreation && (
             <Chip size="small" label={`Année: ${result.entity.anneeCreation}`} variant="outlined" />
           )}
@@ -181,10 +193,10 @@ const SearchPage: React.FC = () => {
   const [globalQuery, setGlobalQuery] = useState(searchParams.get('q') || '');
   const [globalResults, setGlobalResults] = useState<SearchResult[]>([]);
   
-  // Geographic search state
+  // Geographic search state - with test coordinates (Paris, France)
   const [geoParams, setGeoParams] = useState({
-    latitude: '',
-    longitude: '',
+    latitude: '48.8566',    // Paris latitude for testing
+    longitude: '2.3522',    // Paris longitude for testing
     radius: '100',
   });
   const [geoResults, setGeoResults] = useState<SearchResult[]>([]);
@@ -248,6 +260,8 @@ const SearchPage: React.FC = () => {
   const performGeographicSearch = async () => {
     const { latitude, longitude, radius } = geoParams;
     
+    console.log('Geographic search params:', { latitude, longitude, radius });
+    
     if (!latitude || !longitude) {
       setError('Veuillez saisir une latitude et une longitude');
       return;
@@ -257,21 +271,93 @@ const SearchPage: React.FC = () => {
     setError(null);
 
     try {
-      const response = await searchApi.geographic({
+      const params = {
         lat: parseFloat(latitude),
         lng: parseFloat(longitude),
         radius: parseInt(radius),
-      });
+      };
+      
+      console.log('Calling geographic search API with params:', params);
+      const response = await searchApi.geographic(params);
+      console.log('Geographic search API response:', response);
       
       if (response.success) {
-        setGeoResults(response.data || []);
+        const responseData = response.data || {};
+        const rawResults = responseData.results || [];
+        console.log('Geographic search raw results:', rawResults);
+        
+        // Transform the nested structure to match SearchResult interface
+        const transformedResults: SearchResult[] = [];
+        
+        rawResults.forEach((geoResult, index) => {
+          console.log(`Processing geo result ${index}:`, geoResult);
+          
+          // Add instruments from this location
+          if (geoResult.instruments && geoResult.instruments.length > 0) {
+            geoResult.instruments.forEach((instrument: any) => {
+              transformedResults.push({
+                type: 'Instrument',
+                name: instrument.nomInstrument,
+                entity: {
+                  id: instrument.id,
+                  ...instrument,
+                  latitude: geoResult.localite?.latitude,
+                  longitude: geoResult.localite?.longitude,
+                  nomLocalite: geoResult.localite?.nomLocalite,
+                  distance: geoResult.distance
+                },
+                labels: ['Instrument']
+              });
+            });
+          }
+          
+          // Add the location itself
+          if (geoResult.localite) {
+            transformedResults.push({
+              type: 'Localite',
+              name: geoResult.localite.nomLocalite,
+              entity: {
+                id: geoResult.localite.id,
+                ...geoResult.localite,
+                distance: geoResult.distance
+              },
+              labels: ['Localite']
+            });
+          }
+          
+          // Add groupes ethniques from this location
+          if (geoResult.groupesEthniques && geoResult.groupesEthniques.length > 0) {
+            geoResult.groupesEthniques.forEach((groupe: any) => {
+              transformedResults.push({
+                type: 'GroupeEthnique',
+                name: groupe.nomGroupe,
+                entity: {
+                  id: groupe.id,
+                  ...groupe,
+                  latitude: geoResult.localite?.latitude,
+                  longitude: geoResult.localite?.longitude,
+                  distance: geoResult.distance
+                },
+                labels: ['GroupeEthnique']
+              });
+            });
+          }
+        });
+        
+        console.log('Transformed results for display:', transformedResults);
+        setGeoResults(transformedResults);
+        
+        if (transformedResults.length === 0) {
+          setError('Aucun résultat trouvé dans cette zone géographique');
+        }
       } else {
+        console.error('Geographic search failed:', response.error);
         setError(response.error || 'Erreur lors de la recherche géographique');
         setGeoResults([]);
       }
     } catch (err) {
       console.error('Geographic search error:', err);
-      setError('Erreur lors de la recherche géographique');
+      setError(`Erreur lors de la recherche géographique: ${err instanceof Error ? err.message : 'Erreur inconnue'}`);
       setGeoResults([]);
     } finally {
       setLoading(false);
@@ -503,13 +589,13 @@ const SearchPage: React.FC = () => {
         {/* Geographic Search Tab */}
         <TabPanel value={activeTab} index={1}>
           <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Box sx={{ mb: 3 }}>
                 <Typography variant="h6" gutterBottom>
                   Paramètres de Recherche
                 </Typography>
                 <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       fullWidth
                       label="Latitude"
@@ -519,7 +605,7 @@ const SearchPage: React.FC = () => {
                       inputProps={{ step: 'any' }}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       fullWidth
                       label="Longitude"
@@ -529,7 +615,7 @@ const SearchPage: React.FC = () => {
                       inputProps={{ step: 'any' }}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       fullWidth
                       label="Rayon (km)"
@@ -538,7 +624,7 @@ const SearchPage: React.FC = () => {
                       onChange={(e) => setGeoParams(prev => ({ ...prev, radius: e.target.value }))}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <Button
                       fullWidth
                       variant="contained"
@@ -548,31 +634,81 @@ const SearchPage: React.FC = () => {
                       Rechercher
                     </Button>
                   </Grid>
+                  
+                  {/* Boutons de coordonnées prédéfinies pour tests */}
+                  <Grid size={12}>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Coordonnées de test :
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => setGeoParams({ latitude: '48.8566', longitude: '2.3522', radius: '100' })}
+                      >
+                        Paris
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => setGeoParams({ latitude: '14.7167', longitude: '-17.4677', radius: '200' })}
+                      >
+                        Dakar
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => setGeoParams({ latitude: '12.6392', longitude: '-8.0029', radius: '300' })}
+                      >
+                        Bamako
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => setGeoParams({ latitude: '5.3600', longitude: '-4.0083', radius: '150' })}
+                      >
+                        Abidjan
+                      </Button>
+                    </Box>
+                  </Grid>
                 </Grid>
               </Box>
             </Grid>
             
-            <Grid item xs={12} md={6}>
-              {loading ? (
-                <LoadingSpinner />
-              ) : geoResults.length > 0 ? (
-                <Box>
-                  <Typography variant="h6" gutterBottom>
-                    Résultats Géographiques
-                  </Typography>
-                  {geoResults.map((result, index) => (
-                    <SearchResultItem
-                      key={index}
-                      result={result}
-                      onClick={handleResultSelect}
-                    />
-                  ))}
-                </Box>
-              ) : (
-                <Alert severity="info">
-                  Aucun résultat géographique trouvé
-                </Alert>
-              )}
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Box sx={{ minHeight: '300px' }}>
+                {loading ? (
+                  <LoadingSpinner message="Recherche géographique en cours..." />
+                ) : geoResults.length > 0 ? (
+                  <Box>
+                    <Typography variant="h6" gutterBottom>
+                      {geoResults.length} résultat{geoResults.length > 1 ? 's' : ''} dans la zone
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Rayon de {geoParams.radius} km autour de ({parseFloat(geoParams.latitude).toFixed(4)}, {parseFloat(geoParams.longitude).toFixed(4)})
+                    </Typography>
+                    {console.log('Rendering geographic results:', geoResults)}
+                    {geoResults.map((result, index) => {
+                      console.log(`Rendering result ${index}:`, result);
+                      return (
+                        <SearchResultItem
+                          key={index}
+                          result={result}
+                          onClick={handleResultSelect}
+                        />
+                      );
+                    })}
+                  </Box>
+                ) : error ? (
+                  <Alert severity="error" sx={{ mb: 2 }}>
+                    {error}
+                  </Alert>
+                ) : (
+                  <Alert severity="info">
+                    Utilisez les coordonnées prédéfinies ou saisissez vos propres coordonnées pour rechercher des entités dans une zone géographique.
+                  </Alert>
+                )}
+              </Box>
             </Grid>
           </Grid>
         </TabPanel>
@@ -580,13 +716,13 @@ const SearchPage: React.FC = () => {
         {/* Similarity Search Tab */}
         <TabPanel value={activeTab} index={2}>
           <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Box sx={{ mb: 3 }}>
                 <Typography variant="h6" gutterBottom>
                   Recherche de Similarité
                 </Typography>
                 <Grid container spacing={2}>
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <TextField
                       fullWidth
                       label="ID de l'entité"
@@ -594,7 +730,7 @@ const SearchPage: React.FC = () => {
                       onChange={(e) => setSimilarityParams(prev => ({ ...prev, entityId: e.target.value }))}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <FormControl fullWidth>
                       <InputLabel>Type d'entité</InputLabel>
                       <Select
@@ -614,7 +750,7 @@ const SearchPage: React.FC = () => {
                       </Select>
                     </FormControl>
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <Button
                       fullWidth
                       variant="contained"
@@ -628,7 +764,7 @@ const SearchPage: React.FC = () => {
               </Box>
             </Grid>
             
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               {loading ? (
                 <LoadingSpinner />
               ) : similarResults.length > 0 ? (
@@ -660,13 +796,86 @@ const SearchPage: React.FC = () => {
           ) : culturalPatterns.length > 0 ? (
             <Grid container spacing={3}>
               {culturalPatterns.map((pattern, index) => (
-                <Grid item xs={12} md={6} key={index}>
-                  <Card>
+                <Grid size={{ xs: 12, md: 6 }} key={index}>
+                  <Card sx={{ height: '100%' }}>
                     <CardContent>
-                      <Typography variant="h6" gutterBottom>
-                        Pattern #{index + 1}
-                      </Typography>
-                      <pre>{JSON.stringify(pattern, null, 2)}</pre>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                        <Language color="primary" sx={{ mr: 1 }} />
+                        <Typography variant="h6" component="div">
+                          {pattern.patrimoine}
+                        </Typography>
+                      </Box>
+                      
+                      <Box sx={{ mb: 2 }}>
+                        <Typography variant="body2" color="text.secondary" gutterBottom>
+                          <strong>Groupe ethnique:</strong> {pattern.groupe}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" gutterBottom>
+                          <strong>Localité:</strong> {pattern.localite}
+                        </Typography>
+                      </Box>
+
+                      <Divider sx={{ my: 2 }} />
+
+                      {/* Instruments */}
+                      {pattern.instruments && pattern.instruments.length > 0 && (
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant="subtitle2" gutterBottom>
+                            <MusicNote sx={{ fontSize: 16, mr: 0.5, verticalAlign: 'middle' }} />
+                            Instruments ({pattern.instruments.length})
+                          </Typography>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                            {pattern.instruments.map((instrument: string, idx: number) => (
+                              <Chip key={idx} label={instrument} size="small" color="primary" variant="outlined" />
+                            ))}
+                          </Box>
+                        </Box>
+                      )}
+
+                      {/* Rythmes */}
+                      {pattern.rythmes && pattern.rythmes.length > 0 && (
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant="subtitle2" gutterBottom>
+                            <Timeline sx={{ fontSize: 16, mr: 0.5, verticalAlign: 'middle' }} />
+                            Rythmes ({pattern.rythmes.length})
+                          </Typography>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                            {pattern.rythmes.map((rythme: string, idx: number) => (
+                              <Chip key={idx} label={rythme} size="small" color="secondary" variant="outlined" />
+                            ))}
+                          </Box>
+                        </Box>
+                      )}
+
+                      {/* Matériaux */}
+                      {pattern.materiaux && pattern.materiaux.length > 0 && (
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant="subtitle2" gutterBottom>
+                            <Build sx={{ fontSize: 16, mr: 0.5, verticalAlign: 'middle' }} />
+                            Matériaux ({pattern.materiaux.length})
+                          </Typography>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                            {pattern.materiaux.map((materiau: string, idx: number) => (
+                              <Chip key={idx} label={materiau} size="small" color="success" variant="outlined" />
+                            ))}
+                          </Box>
+                        </Box>
+                      )}
+
+                      {/* Familles */}
+                      {pattern.familles && pattern.familles.length > 0 && (
+                        <Box>
+                          <Typography variant="subtitle2" gutterBottom>
+                            <Category sx={{ fontSize: 16, mr: 0.5, verticalAlign: 'middle' }} />
+                            Familles ({pattern.familles.length})
+                          </Typography>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                            {pattern.familles.map((famille: string, idx: number) => (
+                              <Chip key={idx} label={famille} size="small" color="info" variant="outlined" />
+                            ))}
+                          </Box>
+                        </Box>
+                      )}
                     </CardContent>
                   </Card>
                 </Grid>
@@ -684,20 +893,141 @@ const SearchPage: React.FC = () => {
           {loading ? (
             <LoadingSpinner message="Analyse de centralité en cours..." />
           ) : centralityData.length > 0 ? (
-            <Grid container spacing={3}>
-              {centralityData.map((item, index) => (
-                <Grid item xs={12} md={6} key={index}>
-                  <Card>
-                    <CardContent>
-                      <Typography variant="h6" gutterBottom>
-                        Analyse #{index + 1}
-                      </Typography>
-                      <pre>{JSON.stringify(item, null, 2)}</pre>
-                    </CardContent>
-                  </Card>
+            <Box>
+              <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
+                Analyse de Centralité - {centralityData.length} entités
+              </Typography>
+              
+              {/* Top entities */}
+              <Paper sx={{ p: 2, mb: 3 }}>
+                <Typography variant="subtitle1" gutterBottom>
+                  <TrendingUp sx={{ mr: 1, verticalAlign: 'middle' }} />
+                  Entités les plus centrales
+                </Typography>
+                <Grid container spacing={2}>
+                  {centralityData.slice(0, 3).map((item, index) => (
+                    <Grid size={{ xs: 12, md: 4 }} key={index}>
+                      <Card variant="outlined" sx={{ height: '100%' }}>
+                        <CardContent>
+                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                            <Chip 
+                              label={`#${index + 1}`} 
+                              size="small" 
+                              color={index === 0 ? 'primary' : index === 1 ? 'secondary' : 'default'}
+                            />
+                            <Typography variant="h4" sx={{ ml: 'auto', fontWeight: 'bold' }}>
+                              {item.centrality}
+                            </Typography>
+                          </Box>
+                          
+                          <Typography variant="h6" gutterBottom>
+                            {item.entity.nomInstrument || item.entity.nomGroupe || item.entity.nomLocalite || item.entity.nomRythme}
+                          </Typography>
+                          
+                          <Chip 
+                            label={item.type} 
+                            size="small" 
+                            color={
+                              item.type === 'Instrument' ? 'primary' :
+                              item.type === 'GroupeEthnique' ? 'success' :
+                              item.type === 'Localite' ? 'info' :
+                              item.type === 'Rythme' ? 'secondary' : 'default'
+                            }
+                            variant="outlined"
+                          />
+                          
+                          {item.entity.description && (
+                            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                              {item.entity.description}
+                            </Typography>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
                 </Grid>
-              ))}
-            </Grid>
+              </Paper>
+
+              {/* All entities table */}
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Rang</TableCell>
+                      <TableCell>Entité</TableCell>
+                      <TableCell>Type</TableCell>
+                      <TableCell align="right">Score de Centralité</TableCell>
+                      <TableCell>Détails</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {centralityData.map((item, index) => (
+                      <TableRow key={index} hover>
+                        <TableCell>
+                          <Chip 
+                            label={index + 1} 
+                            size="small" 
+                            color={index < 3 ? 'primary' : 'default'}
+                            variant={index < 3 ? 'filled' : 'outlined'}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Box>
+                            <Typography variant="subtitle2">
+                              {item.entity.nomInstrument || item.entity.nomGroupe || item.entity.nomLocalite || item.entity.nomRythme}
+                            </Typography>
+                            {item.entity.description && (
+                              <Typography variant="caption" color="text.secondary">
+                                {item.entity.description.substring(0, 80)}
+                                {item.entity.description.length > 80 ? '...' : ''}
+                              </Typography>
+                            )}
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={item.type} 
+                            size="small" 
+                            color={
+                              item.type === 'Instrument' ? 'primary' :
+                              item.type === 'GroupeEthnique' ? 'success' :
+                              item.type === 'Localite' ? 'info' :
+                              item.type === 'Rythme' ? 'secondary' : 'default'
+                            }
+                            variant="outlined"
+                          />
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="h6" color="primary">
+                            {item.centrality}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                            {item.entity.anneeCreation && (
+                              <Chip label={`${item.entity.anneeCreation}`} size="small" variant="outlined" />
+                            )}
+                            {item.entity.langue && (
+                              <Chip label={item.entity.langue} size="small" variant="outlined" />
+                            )}
+                            {item.entity.tempoBPM && (
+                              <Chip label={`${item.entity.tempoBPM} BPM`} size="small" variant="outlined" />
+                            )}
+                            {item.entity.latitude && item.entity.longitude && (
+                              <Chip 
+                                label={`${item.entity.latitude.toFixed(2)}, ${item.entity.longitude.toFixed(2)}`} 
+                                size="small" 
+                                variant="outlined" 
+                              />
+                            )}
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
           ) : (
             <Alert severity="info">
               Aucune donnée de centralité disponible
