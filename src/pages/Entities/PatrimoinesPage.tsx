@@ -11,8 +11,8 @@ import { patrimoinesApi, PatrimoineCulturel } from '../../services/api';
 const patrimoinesConfig: EntityConfig = {
   name: 'Patrimoine Culturel',
   pluralName: 'Patrimoines Culturels',
-  icon: <AccountBalance color="warning" />,
-  color: 'warning',
+  icon: <AccountBalance color="primary" />,
+  color: 'primary',
   displayField: 'nomPatrimoine',
   searchFields: ['nomPatrimoine', 'descriptionPatrimoine'],
   fields: [

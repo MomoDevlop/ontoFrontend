@@ -15,8 +15,8 @@ import { famillesApi, Famille } from '../../services/api';
 const famillesConfig: EntityConfig = {
   name: 'Famille d\'Instrument',
   pluralName: 'Familles d\'Instruments',
-  icon: <Category color="secondary" />,
-  color: 'secondary',
+  icon: <Category color="primary" />,
+  color: 'primary',
   displayField: 'nomFamille',
   searchFields: ['nomFamille', 'descriptionFamille'],
   fields: [

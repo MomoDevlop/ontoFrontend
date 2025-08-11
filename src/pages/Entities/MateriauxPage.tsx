@@ -10,8 +10,8 @@ import { materiauxApi, Materiau } from '../../services/api';
 const materiauxConfig: EntityConfig = {
   name: 'Matériau',
   pluralName: 'Matériaux',
-  icon: <Build color="warning" />,
-  color: 'warning',
+  icon: <Build color="primary" />,
+  color: 'primary',
   displayField: 'nomMateriau',
   searchFields: ['nomMateriau', 'typeMateriau'],
   fields: [

@@ -51,6 +51,9 @@ import {
   Palette,
   TouchApp,
   Person,
+  Code,
+  PlayArrow,
+  Clear,
 } from '@mui/icons-material';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import LoadingSpinner from '../../components/Common/LoadingSpinner';
@@ -213,6 +216,12 @@ const SearchPage: React.FC = () => {
   
   // Centrality analysis state
   const [centralityData, setCentralityData] = useState<any[]>([]);
+  
+  // Cypher query state
+  const [cypherQuery, setCypherQuery] = useState('MATCH (n) RETURN n LIMIT 10');
+  const [cypherParameters, setCypherParameters] = useState('{}');
+  const [cypherResults, setCypherResults] = useState<any[]>([]);
+  const [cypherHistory, setCypherHistory] = useState<string[]>([]);
 
   /**
    * Load initial search if query parameter exists
@@ -440,6 +449,82 @@ const SearchPage: React.FC = () => {
   };
 
   /**
+   * Execute Cypher query
+   */
+  const executeCypherQuery = async () => {
+    if (!cypherQuery.trim()) {
+      setError('Veuillez saisir une requête Cypher');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      let parameters = {};
+      try {
+        parameters = cypherParameters.trim() ? JSON.parse(cypherParameters) : {};
+      } catch (parseError) {
+        setError('Paramètres JSON invalides');
+        setLoading(false);
+        return;
+      }
+
+      const response = await searchApi.executeCypher(cypherQuery, parameters);
+      console.log('Frontend received response:', response);
+      
+      if (response.success) {
+        console.log('Response data:', response.data);
+        setCypherResults(response.data || []);
+        
+        // Add to history if not already present
+        if (!cypherHistory.includes(cypherQuery)) {
+          setCypherHistory(prev => [cypherQuery, ...prev.slice(0, 9)]); // Keep last 10 queries
+        }
+      } else {
+        console.error('Query failed:', response.error);
+        setError(response.error || 'Erreur lors de l\'exécution de la requête');
+        setCypherResults([]);
+      }
+    } catch (err) {
+      console.error('Cypher execution error:', err);
+      setError('Erreur lors de l\'exécution de la requête Cypher');
+      setCypherResults([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Load predefined Cypher query
+   */
+  const loadPredefinedQuery = (query: string) => {
+    setCypherQuery(query);
+    setCypherParameters('{}');
+  };
+
+  /**
+   * Test with fake data for debugging
+   */
+  const testWithFakeData = () => {
+    const fakeResults = [
+      { "nom": "Djembe", "description": "Tambour africain" },
+      { "nom": "Kora", "description": "Harpe-luth" },
+      { "nom": "Balafon", "description": "Xylophone" }
+    ];
+    setCypherResults(fakeResults);
+    console.log('Set fake results:', fakeResults);
+  };
+
+  /**
+   * Clear Cypher results
+   */
+  const clearCypherResults = () => {
+    setCypherResults([]);
+    setError(null);
+  };
+
+  /**
    * Handle tab change
    */
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
@@ -537,6 +622,7 @@ const SearchPage: React.FC = () => {
           <Tab label="Similarité" icon={<Timeline />} />
           <Tab label="Patterns Culturels" icon={<Language />} />
           <Tab label="Analyse de Centralité" icon={<TrendingUp />} />
+          <Tab label="Requêtes Cypher" icon={<Code />} />
         </Tabs>
 
         {/* Global Search Tab */}
@@ -1033,6 +1119,197 @@ const SearchPage: React.FC = () => {
               Aucune donnée de centralité disponible
             </Alert>
           )}
+        </TabPanel>
+
+        {/* Cypher Query Tab */}
+        <TabPanel value={activeTab} index={5}>
+          <Grid container spacing={3}>
+            {/* Query Editor */}
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  <Code sx={{ mr: 1, verticalAlign: 'middle' }} />
+                  Éditeur de Requêtes Cypher
+                </Typography>
+                
+                {/* Predefined queries */}
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    Requêtes prédéfinies :
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => loadPredefinedQuery('MATCH (n) RETURN n LIMIT 10')}
+                    >
+                      Tous les nœuds
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => loadPredefinedQuery('MATCH (i:Instrument) RETURN i.nomInstrument, i.description LIMIT 20')}
+                    >
+                      Instruments
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => loadPredefinedQuery('MATCH (i:Instrument)-[r]->(n) RETURN i.nomInstrument, type(r), n LIMIT 15')}
+                    >
+                      Relations
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => loadPredefinedQuery('MATCH (l:Localite) WHERE l.latitude IS NOT NULL RETURN l.nomLocalite, l.latitude, l.longitude')}
+                    >
+                      Localités géo
+                    </Button>
+                  </Box>
+                </Box>
+
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={8}
+                  label="Requête Cypher"
+                  value={cypherQuery}
+                  onChange={(e) => setCypherQuery(e.target.value)}
+                  sx={{ mb: 2, fontFamily: 'monospace' }}
+                  placeholder="Saisissez votre requête Cypher ici..."
+                />
+
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  label="Paramètres (JSON)"
+                  value={cypherParameters}
+                  onChange={(e) => setCypherParameters(e.target.value)}
+                  sx={{ mb: 2, fontFamily: 'monospace' }}
+                  placeholder='{"param1": "value1", "param2": 123}'
+                />
+
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button
+                    variant="contained"
+                    startIcon={<PlayArrow />}
+                    onClick={executeCypherQuery}
+                    disabled={loading}
+                  >
+                    Exécuter
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<Clear />}
+                    onClick={clearCypherResults}
+                  >
+                    Effacer
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={testWithFakeData}
+                    sx={{ ml: 2 }}
+                  >
+                    Test
+                  </Button>
+                </Box>
+
+                {/* Query History */}
+                {cypherHistory.length > 0 && (
+                  <Box sx={{ mt: 3 }}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Historique des requêtes
+                    </Typography>
+                    <List dense>
+                      {cypherHistory.slice(0, 5).map((query, index) => (
+                        <ListItem
+                          key={index}
+                          button
+                          onClick={() => setCypherQuery(query)}
+                          sx={{ border: 1, borderColor: 'divider', borderRadius: 1, mb: 0.5 }}
+                        >
+                          <ListItemText
+                            primary={query.substring(0, 60) + (query.length > 60 ? '...' : '')}
+                            sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Box>
+                )}
+              </Box>
+            </Grid>
+
+            {/* Results */}
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Box sx={{ minHeight: '400px' }}>
+                <Typography variant="h6" gutterBottom>
+                  Résultats
+                </Typography>
+                
+                <Typography variant="caption" color="text.secondary" gutterBottom>
+                  Debug: cypherResults.length = {cypherResults.length}, loading = {loading.toString()}
+                </Typography>
+                
+                {loading ? (
+                  <LoadingSpinner message="Exécution de la requête..." />
+                ) : cypherResults.length > 0 ? (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      {cypherResults.length} résultat{cypherResults.length > 1 ? 's' : ''} trouvé{cypherResults.length > 1 ? 's' : ''}
+                    </Typography>
+                    
+                    <TableContainer component={Paper} sx={{ maxHeight: 500 }}>
+                      <Table stickyHeader>
+                        <TableHead>
+                          <TableRow>
+                            {cypherResults.length > 0 && Object.keys(cypherResults[0]).map((key) => (
+                              <TableCell key={key}>{key}</TableCell>
+                            ))}
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {cypherResults.map((result, index) => (
+                            <TableRow key={index} hover>
+                              {Object.values(result).map((value: any, valueIndex) => (
+                                <TableCell key={valueIndex}>
+                                  {typeof value === 'object' && value !== null ? (
+                                    <Box sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                                      <details>
+                                        <summary style={{ cursor: 'pointer', color: 'primary.main' }}>
+                                          {Array.isArray(value) ? `Array(${value.length})` : 'Object'}
+                                        </summary>
+                                        <pre style={{ marginTop: '8px', fontSize: '0.75rem' }}>
+                                          {JSON.stringify(value, null, 2)}
+                                        </pre>
+                                      </details>
+                                    </Box>
+                                  ) : (
+                                    <Typography variant="body2">
+                                      {String(value)}
+                                    </Typography>
+                                  )}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Box>
+                ) : (
+                  <Alert severity="info">
+                    Saisissez et exécutez une requête Cypher pour voir les résultats ici.
+                    <br />
+                    <strong>Note:</strong> Seules les requêtes de lecture (MATCH, RETURN, WHERE, etc.) sont autorisées pour des raisons de sécurité.
+                  </Alert>
+                )}
+              </Box>
+            </Grid>
+          </Grid>
         </TabPanel>
       </Paper>
     </Box>

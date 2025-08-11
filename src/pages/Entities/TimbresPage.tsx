@@ -11,8 +11,8 @@ import { timbresApi, Timbre } from '../../services/api';
 const timbresConfig: EntityConfig = {
   name: 'Timbre',
   pluralName: 'Timbres',
-  icon: <Palette color="secondary" />,
-  color: 'secondary',
+  icon: <Palette color="primary" />,
+  color: 'primary',
   displayField: 'descriptionTimbre',
   searchFields: ['descriptionTimbre'],
   fields: [

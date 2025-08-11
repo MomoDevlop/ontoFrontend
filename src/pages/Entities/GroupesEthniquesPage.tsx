@@ -11,7 +11,7 @@ const groupesEthniquesConfig: EntityConfig = {
   name: 'Groupe Ethnique',
   pluralName: 'Groupes Ethniques',
   icon: <Language color="success" />,
-  color: 'success',
+  color: 'primary',
   displayField: 'nomGroupe',
   searchFields: ['nomGroupe', 'langue'],
   fields: [

@@ -11,8 +11,8 @@ import { techniquesApi, TechniqueDeJeu } from '../../services/api';
 const techniquesConfig: EntityConfig = {
   name: 'Technique de Jeu',
   pluralName: 'Techniques de Jeu',
-  icon: <TouchApp color="info" />,
-  color: 'info',
+  icon: <TouchApp color="primary" />,
+  color: 'primary',
   displayField: 'nomTechnique',
   searchFields: ['nomTechnique', 'descriptionTechnique'],
   fields: [
