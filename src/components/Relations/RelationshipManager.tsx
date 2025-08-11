@@ -852,13 +852,14 @@ const RelationshipManager: React.FC<RelationshipManagerProps> = ({
         <DialogTitle>Créer une Nouvelle Relation</DialogTitle>
         
         <DialogContent dividers>
-          <Grid container spacing={3}>
+          <Grid container spacing={10}>
             {/* Source Entity Selection */}
-            <Grid item xs={12} md={6}>
+            <Grid item>
               <Typography variant="subtitle1" gutterBottom>
                 Entité Source
               </Typography>
-              <FormControl fullWidth sx={{ mb: 2 }}>
+
+              <FormControl fullWidth>
                 <InputLabel>Type d'entité source</InputLabel>
                 <Select
                   value={createForm.sourceType}
@@ -918,7 +919,7 @@ const RelationshipManager: React.FC<RelationshipManagerProps> = ({
             </Grid>
 
             {/* Relation Type Selection */}
-            <Grid item xs={12}>
+            <Grid item xs={12} md={6}>
               <FormControl fullWidth>
                 <InputLabel>Type de relation</InputLabel>
                 <Select

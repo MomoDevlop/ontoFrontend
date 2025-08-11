@@ -591,6 +591,37 @@ export const searchApi = {
       };
     }
   },
+
+  async executeCypher(query: string, parameters: Record<string, any> = {}): Promise<ApiResponse<any[]>> {
+    try {
+      const response: AxiosResponse<any> = await apiClient.post('/search/cypher', {
+        query,
+        parameters
+      });
+      
+      console.log('Cypher API response:', response.data);
+      
+      if (response.data.success) {
+        return {
+          success: true,
+          data: response.data.data.results || []
+        };
+      } else {
+        return {
+          success: false,
+          error: response.data.error || 'Failed to execute Cypher query',
+          data: []
+        };
+      }
+    } catch (error: any) {
+      console.error('Error executing Cypher query:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || error.message || 'Failed to execute Cypher query',
+        data: []
+      };
+    }
+  },
 };
 
 // Health check API
