@@ -6,6 +6,7 @@
  */
 
 import axios, { AxiosResponse } from 'axios';
+import { withRateLimit } from './rateLimiter';
 
 // Base configuration
 const API_BASE_URL = 'http://localhost:3001/api';
@@ -221,24 +222,26 @@ interface CrudService<T> {
 function createCrudService<T>(endpoint: string): CrudService<T> {
   return {
     async getAll(params: ListParams = {}): Promise<ApiListResponse<T>> {
-      try {
-        const response: AxiosResponse<ApiListResponse<T>> = await apiClient.get(endpoint, {
-          params: {
-            page: params.page || 1,
-            limit: params.limit || 10,
-            search: params.search,
-            ...params.filters,
-          },
-        });
-        return response.data;
-      } catch (error: any) {
-        console.error(`Error fetching ${endpoint}:`, error);
-        return {
-          success: false,
-          error: error.message || `Failed to fetch ${endpoint}`,
-          data: { data: [], total: 0 }
-        };
-      }
+      return withRateLimit(`${endpoint}-getAll`, async () => {
+        try {
+          const response: AxiosResponse<ApiListResponse<T>> = await apiClient.get(endpoint, {
+            params: {
+              page: params.page || 1,
+              limit: params.limit || 10,
+              search: params.search,
+              ...params.filters,
+            },
+          });
+          return response.data;
+        } catch (error: any) {
+          console.error(`Error fetching ${endpoint}:`, error);
+          return {
+            success: false,
+            error: error.message || `Failed to fetch ${endpoint}`,
+            data: { data: [], total: 0 }
+          };
+        }
+      });
     },
 
     async getById(id: number): Promise<ApiResponse<T>> {
@@ -298,17 +301,19 @@ function createCrudService<T>(endpoint: string): CrudService<T> {
     },
 
     async getStatistics(): Promise<ApiResponse<any>> {
-      try {
-        const response: AxiosResponse<ApiResponse<any>> = await apiClient.get(`${endpoint}/statistics`);
-        return response.data;
-      } catch (error: any) {
-        console.error(`Error fetching ${endpoint}/statistics:`, error);
-        return {
-          success: false,
-          error: error.message || `Failed to fetch ${endpoint}/statistics`,
-          data: undefined
-        };
-      }
+      return withRateLimit(`${endpoint}-getStatistics`, async () => {
+        try {
+          const response: AxiosResponse<ApiResponse<any>> = await apiClient.get(`${endpoint}/statistics`);
+          return response.data;
+        } catch (error: any) {
+          console.error(`Error fetching ${endpoint}/statistics:`, error);
+          return {
+            success: false,
+            error: error.message || `Failed to fetch ${endpoint}/statistics`,
+            data: undefined
+          };
+        }
+      });
     },
   };
 }
@@ -327,23 +332,25 @@ export const patrimoinesApi = createCrudService<PatrimoineCulturel>('/patrimoine
 // Relations API service
 export const relationsApi = {
   async getAll(params: ListParams = {}): Promise<ApiResponse<Relation[]>> {
-    try {
-      const response: AxiosResponse<ApiResponse<Relation[]>> = await apiClient.get('/relations', {
-        params: {
-          page: params.page || 1,
-          limit: params.limit || 50,
-          relationType: params.filters?.relationType,
-        },
-      });
-      return response.data;
-    } catch (error: any) {
-      console.error('Error fetching relations:', error);
-      return {
-        success: false,
-        error: error.message || 'Failed to fetch relations',
-        data: []
-      };
-    }
+    return withRateLimit('relations-getAll', async () => {
+      try {
+        const response: AxiosResponse<ApiResponse<Relation[]>> = await apiClient.get('/relations', {
+          params: {
+            page: params.page || 1,
+            limit: params.limit || 50,
+            relationType: params.filters?.relationType,
+          },
+        });
+        return response.data;
+      } catch (error: any) {
+        console.error('Error fetching relations:', error);
+        return {
+          success: false,
+          error: error.message || 'Failed to fetch relations',
+          data: []
+        };
+      }
+    });
   },
 
   async getForEntity(entityId: string): Promise<ApiResponse<any>> {
@@ -449,17 +456,19 @@ export const relationsApi = {
   },
 
   async getOntology(): Promise<ApiResponse<any>> {
-    try {
-      const response: AxiosResponse<ApiResponse<any>> = await apiClient.get('/relations/ontology');
-      return response.data;
-    } catch (error: any) {
-      console.error('Error fetching ontology structure:', error);
-      return {
-        success: false,
-        error: error.response?.data?.message || error.message || 'Failed to fetch ontology structure',
-        data: undefined
-      };
-    }
+    return withRateLimit('relations-getOntology', async () => {
+      try {
+        const response: AxiosResponse<ApiResponse<any>> = await apiClient.get('/relations/ontology');
+        return response.data;
+      } catch (error: any) {
+        console.error('Error fetching ontology structure:', error);
+        return {
+          success: false,
+          error: error.response?.data?.message || error.message || 'Failed to fetch ontology structure',
+          data: undefined
+        };
+      }
+    });
   },
 
   async findPaths(sourceId: number, targetId: number, maxDepth: number = 3): Promise<ApiResponse<any[]>> {
