@@ -41,11 +41,11 @@ const PatrimoinesPage: React.FC = () => {
       config={patrimoinesConfig}
       service={patrimoinesApi}
     >
-      <BatchOperations
+{/*       <BatchOperations
         entityType="PatrimoineCulturel"
         service={patrimoinesApi}
         fields={patrimoinesConfig.fields}
-      />
+      /> */}
     </EntityCrudPage>
   );
 };

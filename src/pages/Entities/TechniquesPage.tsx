@@ -41,11 +41,11 @@ const TechniquesPage: React.FC = () => {
       config={techniquesConfig}
       service={techniquesApi}
     >
-      <BatchOperations
+{/*       <BatchOperations
         entityType="TechniqueDeJeu"
         service={techniquesApi}
         fields={techniquesConfig.fields}
-      />
+      /> */}
     </EntityCrudPage>
   );
 };

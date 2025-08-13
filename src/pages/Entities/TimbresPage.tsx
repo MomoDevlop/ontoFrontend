@@ -35,11 +35,11 @@ const TimbresPage: React.FC = () => {
       config={timbresConfig}
       service={timbresApi}
     >
-      <BatchOperations
+{/*       <BatchOperations
         entityType="Timbre"
         service={timbresApi}
         fields={timbresConfig.fields}
-      />
+      /> */}
     </EntityCrudPage>
   );
 };

@@ -53,7 +53,7 @@ const ArtisansPage: React.FC = () => {
       onViewRelations={handleViewRelations}
     >
       {/* Batch Operations Component */}
-      <BatchOperations
+{/*       <BatchOperations
         entityType="Artisan"
         service={artisansApi}
         fields={artisansConfig.fields}
@@ -62,7 +62,7 @@ const ArtisansPage: React.FC = () => {
           // Refresh the entity list
           window.location.reload();
         }}
-      />
+      /> */}
     </EntityCrudPage>
   );
 };

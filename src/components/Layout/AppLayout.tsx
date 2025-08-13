@@ -120,12 +120,12 @@ const navigationItems = [
     path: '/relations',
     description: 'Relations sémantiques',
   },
-  {
+/*   {
     text: 'Analytics',
     icon: <Assessment />,
     path: '/analytics',
     description: 'Tableau de bord analytique',
-  },
+  }, */
 ];
 
 interface AppLayoutProps {

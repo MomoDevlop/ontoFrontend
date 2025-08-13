@@ -125,11 +125,11 @@ function App() {
               path="/relations" 
               element={<RelationsPage />} 
             />
-            
+       {/*      
             <Route 
               path="/analytics" 
               element={<AnalyticsDashboard />} 
-            />
+            /> */}
             
             {/* 404 Not Found */}
             <Route 
