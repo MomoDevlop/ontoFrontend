@@ -619,9 +619,9 @@ const SearchPage: React.FC = () => {
         >
           <Tab label="Recherche Globale" icon={<Search />} />
           <Tab label="Recherche Géographique" icon={<LocationOn />} />
-          <Tab label="Similarité" icon={<Timeline />} />
+          {/* <Tab label="Similarité" icon={<Timeline />} />
           <Tab label="Patterns Culturels" icon={<Language />} />
-          <Tab label="Analyse de Centralité" icon={<TrendingUp />} />
+          <Tab label="Analyse de Centralité" icon={<TrendingUp />} /> */}
           <Tab label="Requêtes Cypher" icon={<Code />} />
         </Tabs>
 
@@ -799,7 +799,7 @@ const SearchPage: React.FC = () => {
           </Grid>
         </TabPanel>
 
-        {/* Similarity Search Tab */}
+        {/* Similarity Search Tab - COMMENTED OUT
         <TabPanel value={activeTab} index={2}>
           <Grid container spacing={3}>
             <Grid size={{ xs: 12, md: 6 }}>
@@ -874,8 +874,9 @@ const SearchPage: React.FC = () => {
             </Grid>
           </Grid>
         </TabPanel>
+        */}
 
-        {/* Cultural Patterns Tab */}
+        {/* Cultural Patterns Tab - COMMENTED OUT
         <TabPanel value={activeTab} index={3}>
           {loading ? (
             <LoadingSpinner message="Chargement des patterns culturels..." />
@@ -903,7 +904,6 @@ const SearchPage: React.FC = () => {
 
                       <Divider sx={{ my: 2 }} />
 
-                      {/* Instruments */}
                       {pattern.instruments && pattern.instruments.length > 0 && (
                         <Box sx={{ mb: 2 }}>
                           <Typography variant="subtitle2" gutterBottom>
@@ -918,7 +918,6 @@ const SearchPage: React.FC = () => {
                         </Box>
                       )}
 
-                      {/* Rythmes */}
                       {pattern.rythmes && pattern.rythmes.length > 0 && (
                         <Box sx={{ mb: 2 }}>
                           <Typography variant="subtitle2" gutterBottom>
@@ -933,7 +932,6 @@ const SearchPage: React.FC = () => {
                         </Box>
                       )}
 
-                      {/* Matériaux */}
                       {pattern.materiaux && pattern.materiaux.length > 0 && (
                         <Box sx={{ mb: 2 }}>
                           <Typography variant="subtitle2" gutterBottom>
@@ -948,7 +946,6 @@ const SearchPage: React.FC = () => {
                         </Box>
                       )}
 
-                      {/* Familles */}
                       {pattern.familles && pattern.familles.length > 0 && (
                         <Box>
                           <Typography variant="subtitle2" gutterBottom>
@@ -973,8 +970,9 @@ const SearchPage: React.FC = () => {
             </Alert>
           )}
         </TabPanel>
+        */}
 
-        {/* Centrality Analysis Tab */}
+        {/* Centrality Analysis Tab - COMMENTED OUT
         <TabPanel value={activeTab} index={4}>
           {loading ? (
             <LoadingSpinner message="Analyse de centralité en cours..." />
@@ -984,7 +982,6 @@ const SearchPage: React.FC = () => {
                 Analyse de Centralité - {centralityData.length} entités
               </Typography>
               
-              {/* Top entities */}
               <Paper sx={{ p: 2, mb: 3 }}>
                 <Typography variant="subtitle1" gutterBottom>
                   <TrendingUp sx={{ mr: 1, verticalAlign: 'middle' }} />
@@ -1034,7 +1031,6 @@ const SearchPage: React.FC = () => {
                 </Grid>
               </Paper>
 
-              {/* All entities table */}
               <TableContainer component={Paper}>
                 <Table>
                   <TableHead>
@@ -1120,9 +1116,10 @@ const SearchPage: React.FC = () => {
             </Alert>
           )}
         </TabPanel>
+        */}
 
         {/* Cypher Query Tab */}
-        <TabPanel value={activeTab} index={5}>
+        <TabPanel value={activeTab} index={2}>
           <Grid container spacing={3}>
             {/* Query Editor */}
             <Grid size={{ xs: 12, md: 6 }}>

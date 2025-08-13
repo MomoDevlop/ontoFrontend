@@ -124,11 +124,11 @@ const RelationsPage: React.FC = () => {
             icon={<Timeline />}
             iconPosition="start"
           />
-          <Tab 
+          {/* <Tab 
             label="Analyse" 
             icon={<Analytics />}
             iconPosition="start"
-          />
+          /> */}
         </Tabs>
 
         {/* Ontology Visualization Tab */}
@@ -203,7 +203,7 @@ const RelationsPage: React.FC = () => {
         </TabPanel>
 
         {/* Advanced Analysis Tab */}
-        <TabPanel value={activeTab} index={2}>
+        {/* <TabPanel value={activeTab} index={2}>
           <Grid container spacing={3}>
             <Grid item xs={12}>
               <Alert severity="info">
@@ -224,7 +224,6 @@ const RelationsPage: React.FC = () => {
               </Alert>
             </Grid>
 
-            {/* Placeholder for future analytics */}
             <Grid item xs={12} md={6}>
               <Card>
                 <CardContent>
@@ -234,7 +233,6 @@ const RelationsPage: React.FC = () => {
                   <Typography variant="body2" color="text.secondary">
                     Statistiques globales sur la structure du graphe
                   </Typography>
-                  {/* Future: Graph metrics visualization */}
                 </CardContent>
               </Card>
             </Grid>
@@ -248,7 +246,6 @@ const RelationsPage: React.FC = () => {
                   <Typography variant="body2" color="text.secondary">
                     Groupes d'entités fortement connectées
                   </Typography>
-                  {/* Future: Community detection results */}
                 </CardContent>
               </Card>
             </Grid>
@@ -262,12 +259,11 @@ const RelationsPage: React.FC = () => {
                   <Typography variant="body2" color="text.secondary">
                     Explorez les chemins entre deux entités
                   </Typography>
-                  {/* Future: Path finding interface */}
                 </CardContent>
               </Card>
             </Grid>
           </Grid>
-        </TabPanel>
+        </TabPanel> */}
       </Paper>
     </Box>
   );

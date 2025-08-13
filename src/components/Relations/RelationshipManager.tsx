@@ -567,7 +567,7 @@ const RelationshipManager: React.FC<RelationshipManagerProps> = ({
             </Typography>
           </Box>
           <Box>
-            <Button
+            {/* <Button
               size="small"
               startIcon={<Visibility />}
               onClick={() => {
@@ -578,7 +578,7 @@ const RelationshipManager: React.FC<RelationshipManagerProps> = ({
               sx={{ mr: 1 }}
             >
               Voir Source
-            </Button>
+            </Button> */}
             <Button
               size="small"
               color="error"
@@ -701,7 +701,7 @@ const RelationshipManager: React.FC<RelationshipManagerProps> = ({
         <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)}>
           <Tab label="Relations Actives" icon={<Timeline />} />
           <Tab label="Types de Relations" icon={<Category />} />
-          <Tab label="Analyse du Graphe" icon={<AccountTree />} />
+          {/* <Tab label="Analyse du Graphe" icon={<AccountTree />} /> */}
         </Tabs>
 
         {/* Relations List Tab */}
@@ -834,12 +834,12 @@ const RelationshipManager: React.FC<RelationshipManagerProps> = ({
         </TabPanel>
 
         {/* Graph Analysis Tab */}
-        <TabPanel value={activeTab} index={2}>
+        {/* <TabPanel value={activeTab} index={2}>
           <Alert severity="info">
             L'analyse du graphe et la visualisation sont en cours de développement.
             Cette section affichera bientôt des graphiques interactifs des relations.
           </Alert>
-        </TabPanel>
+        </TabPanel> */}
       </Paper>
 
       {/* Create Relationship Dialog */}
@@ -851,15 +851,15 @@ const RelationshipManager: React.FC<RelationshipManagerProps> = ({
       >
         <DialogTitle>Créer une Nouvelle Relation</DialogTitle>
         
-        <DialogContent dividers>
-          <Grid container spacing={10}>
+        <DialogContent dividers sx={{ minHeight: 500 }}>
+          <Grid container spacing={3}>
             {/* Source Entity Selection */}
-            <Grid item>
+            <Grid item xs={12} md={6}>
               <Typography variant="subtitle1" gutterBottom>
                 Entité Source
               </Typography>
 
-              <FormControl fullWidth>
+              <FormControl fullWidth sx={{ mb: 2 }}>
                 <InputLabel>Type d'entité source</InputLabel>
                 <Select
                   value={createForm.sourceType}
@@ -880,8 +880,16 @@ const RelationshipManager: React.FC<RelationshipManagerProps> = ({
                   getOptionLabel={(option) => option.displayName}
                   onChange={(e, value) => handleCreateFormChange('sourceId', value?.id || '')}
                   renderInput={(params) => (
-                    <TextField {...params} label="Sélectionner l'entité source" />
+                    <TextField 
+                      {...params} 
+                      label="Sélectionner l'entité source" 
+                      fullWidth
+                      sx={{ mb: 2 }}
+                    />
                   )}
+                  ListboxProps={{
+                    style: { maxHeight: 200 }
+                  }}
                 />
               )}
             </Grid>
@@ -891,6 +899,7 @@ const RelationshipManager: React.FC<RelationshipManagerProps> = ({
               <Typography variant="subtitle1" gutterBottom>
                 Entité Cible
               </Typography>
+              
               <FormControl fullWidth sx={{ mb: 2 }}>
                 <InputLabel>Type d'entité cible</InputLabel>
                 <Select
@@ -912,14 +921,26 @@ const RelationshipManager: React.FC<RelationshipManagerProps> = ({
                   getOptionLabel={(option) => option.displayName}
                   onChange={(e, value) => handleCreateFormChange('targetId', value?.id || '')}
                   renderInput={(params) => (
-                    <TextField {...params} label="Sélectionner l'entité cible" />
+                    <TextField 
+                      {...params} 
+                      label="Sélectionner l'entité cible"
+                      fullWidth
+                      sx={{ mb: 2 }}
+                    />
                   )}
+                  ListboxProps={{
+                    style: { maxHeight: 200 }
+                  }}
                 />
               )}
             </Grid>
 
-            {/* Relation Type Selection */}
-            <Grid item xs={12} md={6}>
+            {/* Relation Type Selection - Full Width */}
+            <Grid item xs={12}>
+              <Typography variant="subtitle1" gutterBottom>
+                Type de Relation
+              </Typography>
+              
               <FormControl fullWidth>
                 <InputLabel>Type de relation</InputLabel>
                 <Select
@@ -932,16 +953,21 @@ const RelationshipManager: React.FC<RelationshipManagerProps> = ({
                     const config = getRelationTypeConfig(type);
                     return (
                       <MenuItem key={type} value={type}>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          {config.icon}
-                          <Box sx={{ ml: 1 }}>
-                            <Typography variant="body2">
+                        <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                          <Box sx={{ flexGrow: 1 }}>
+                            <Typography variant="body1" fontWeight="medium">
                               {config.label}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
                               {config.description}
                             </Typography>
                           </Box>
+                          <Chip 
+                            label={config.cardinality || 'N:N'} 
+                            size="small" 
+                            color={config.color as any}
+                            variant="outlined"
+                          />
                         </Box>
                       </MenuItem>
                     );
@@ -951,11 +977,52 @@ const RelationshipManager: React.FC<RelationshipManagerProps> = ({
               
               {availableRelationTypes.length === 0 && createForm.sourceType && createForm.targetType && (
                 <Alert severity="warning" sx={{ mt: 2 }}>
-                  Aucun type de relation disponible entre {createForm.sourceType} et {createForm.targetType}.
-                  Vérifiez les contraintes de l'ontologie.
+                  <Typography variant="body2">
+                    <strong>Aucun type de relation disponible</strong> entre <em>{createForm.sourceType}</em> et <em>{createForm.targetType}</em>.
+                  </Typography>
+                  <Typography variant="caption">
+                    Vérifiez les contraintes de l'ontologie ou choisissez d'autres types d'entités.
+                  </Typography>
+                </Alert>
+              )}
+
+              {createForm.relationType && (
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  <Typography variant="body2">
+                    <strong>Relation sélectionnée :</strong> {getRelationTypeConfig(createForm.relationType).label}
+                  </Typography>
+                  <Typography variant="caption">
+                    {getRelationTypeConfig(createForm.relationType).description}
+                  </Typography>
                 </Alert>
               )}
             </Grid>
+
+            {/* Preview Section */}
+            {createForm.sourceId && createForm.targetId && createForm.relationType && (
+              <Grid item xs={12}>
+                <Paper sx={{ p: 2, bgcolor: 'success.50', border: 1, borderColor: 'success.200' }}>
+                  <Typography variant="subtitle2" color="success.main" gutterBottom>
+                    Aperçu de la relation
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Chip 
+                      label={sourceEntities.find(e => e.id == createForm.sourceId)?.displayName || 'Source'} 
+                      color="primary" 
+                      variant="filled"
+                    />
+                    <Typography variant="body2">
+                      {getRelationTypeConfig(createForm.relationType).label}
+                    </Typography>
+                    <Chip 
+                      label={targetEntities.find(e => e.id == createForm.targetId)?.displayName || 'Cible'} 
+                      color="secondary" 
+                      variant="filled"
+                    />
+                  </Box>
+                </Paper>
+              </Grid>
+            )}
           </Grid>
         </DialogContent>
         
