@@ -317,26 +317,41 @@ const OntologyGraphVisualization: React.FC<OntologyGraphVisualizationProps> = ({
   }, []);
 
   /**
-   * Load and process ontology data
+   * Load and process ontology data with rate limiting
    */
   const loadOntologyGraphData = async () => {
     setLoading(true);
     setError(null);
 
     try {
+      // Helper function to add delay between requests
+      const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+      
+      // Load ontology with error handling
+      console.log('Loading ontology structure...');
       const ontologyResponse = await relationsApi.getOntology();
       console.log('Ontology response:', ontologyResponse);
       if (!ontologyResponse.success) {
         throw new Error(ontologyResponse.error || 'Failed to load ontology');
       }
 
+      // Wait before next request to prevent rate limiting
+      await delay(300);
+
+      // Load relations with error handling
+      console.log('Loading relations...');
       const relationsResponse = await relationsApi.getAll();
       console.log('Relations response:', relationsResponse);
       if (!relationsResponse.success) {
         throw new Error(relationsResponse.error || 'Failed to load relations');
       }
 
-      const entitiesResponse = await instrumentsApi.getAll({ limit: 50 });
+      // Wait before next request to prevent rate limiting
+      await delay(300);
+
+      // Load entities with error handling and reduced limit
+      console.log('Loading entities...');
+      const entitiesResponse = await instrumentsApi.getAll({ limit: 30 });
       console.log('Entities response:', entitiesResponse);
       const entities = entitiesResponse.success ? entitiesResponse.data?.data || [] : [];
 

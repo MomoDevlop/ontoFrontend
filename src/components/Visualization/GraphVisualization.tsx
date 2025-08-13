@@ -124,7 +124,7 @@ const RELATION_CONFIGS = {
   'appliqueA': { color: '#f57c00', label: 'appliqué à' },
 };
 
-// Cytoscape stylesheet
+// Cytoscape stylesheet - simplified to avoid errors
 const cytoscapeStylesheet = [
   {
     selector: 'node',
@@ -142,7 +142,6 @@ const cytoscapeStylesheet = [
       'border-width': 2,
       'border-color': '#fff',
       'border-opacity': 0.8,
-      'overlay-padding': '4px',
     },
   },
   {
@@ -163,8 +162,6 @@ const cytoscapeStylesheet = [
       'curve-style': 'bezier',
       'label': 'data(label)',
       'font-size': '8px',
-      'text-rotation': 'autorotate',
-      'text-margin-y': -10,
       'color': '#666',
     },
   },
@@ -215,10 +212,17 @@ const GraphVisualization: React.FC<GraphVisualizationProps> = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Process relations data for graph visualization
+  // Process relations data for graph visualization with rate limiting
   const processRelationGraphData = useCallback(async () => {
     try {
+      // Add delay to prevent too many simultaneous requests
+      const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+      
+      console.log('Loading relations for graph visualization...');
       const response = await relationsApi.getAll();
+      
+      // Add a small delay after the request
+      await delay(100);
       
       // Validate API response
       if (!response || !response.success) {
@@ -249,7 +253,8 @@ const GraphVisualization: React.FC<GraphVisualizationProps> = ({
         const targetKey = `${relation.target.type}_${relation.targetId}`;
 
         // Validate source and target data
-        if (!relation.source.type || !relation.sourceId || !relation.target.type || !relation.targetId) {
+        if (!relation.source.type || relation.sourceId === undefined || relation.sourceId === null || 
+            !relation.target.type || relation.targetId === undefined || relation.targetId === null) {
           console.warn('Missing source or target data:', relation);
           return;
         }
@@ -311,7 +316,9 @@ const GraphVisualization: React.FC<GraphVisualizationProps> = ({
         nodes: result.nodes.length,
         edges: result.edges.length,
         sampleNode: result.nodes[0],
-        sampleEdge: result.edges[0]
+        sampleEdge: result.edges[0],
+        allNodeIds: result.nodes.slice(0, 5).map(n => n.data.id),
+        allEdgeIds: result.edges.slice(0, 5).map(e => e.data.id)
       });
 
       return result;
@@ -371,25 +378,15 @@ const GraphVisualization: React.FC<GraphVisualizationProps> = ({
     }
     
     // Clean up previous instance
-    if (cyRef.current) {
+    if (cyRef.current && cyRef.current !== cy) {
       try {
         cyRef.current.removeAllListeners();
-        cyRef.current.destroy();
       } catch (error) {
         console.warn('Error cleaning up previous cytoscape instance:', error);
       }
     }
     
     cyRef.current = cy;
-
-    // Ensure we have nodes before proceeding
-    if (!cy.nodes() || cy.nodes().length === 0) {
-      console.warn('No nodes found in cytoscape instance');
-      return;
-    }
-
-    // Use batch operations to prevent notify errors
-    cy.startBatch();
 
     try {
       // Node selection
@@ -415,7 +412,6 @@ const GraphVisualization: React.FC<GraphVisualizationProps> = ({
         if (!isMountedRef.current || !cyRef.current) return;
         const node = event.target;
         node.addClass('highlighted');
-        // Highlight connected edges
         node.connectedEdges().addClass('highlighted');
       });
 
@@ -426,19 +422,9 @@ const GraphVisualization: React.FC<GraphVisualizationProps> = ({
         node.connectedEdges().removeClass('highlighted');
       });
 
-      // Make nodes draggable
-      cy.nodes().forEach(node => {
-        if (node && node.grabify) {
-          node.grabify();
-        }
-      });
-
-      // Apply layout with delay to ensure DOM is ready
-      setTimeout(() => {
-        if (!isMountedRef.current || !cyRef.current || cyRef.current.nodes().length === 0) {
-          console.warn('Skipping layout: instance null, unmounted, or no nodes');
-          return;
-        }
+      // Wait for cytoscape to be ready, then apply layout
+      cy.ready(() => {
+        if (!isMountedRef.current || !cyRef.current) return;
         
         try {
           const layoutOptions = {
@@ -447,56 +433,18 @@ const GraphVisualization: React.FC<GraphVisualizationProps> = ({
             animationDuration: 500,
             fit: true,
             padding: 50,
-            stop: () => {
-              if (isMountedRef.current && cyRef.current) {
-                try {
-                  cyRef.current.endBatch();
-                } catch (error) {
-                  console.warn('Error ending batch in layout stop:', error);
-                }
-              }
-            }
           };
           
           const layout = cyRef.current.layout(layoutOptions);
           layout.run();
         } catch (error) {
-          console.warn('Error applying layout:', error);
-          // Ensure batch is ended even if layout fails
-          if (isMountedRef.current && cyRef.current) {
-            try {
-              cyRef.current.endBatch();
-            } catch (batchError) {
-              console.warn('Error ending batch after layout error:', batchError);
-            }
-          }
+          console.warn('Error applying initial layout:', error);
         }
-      }, 100);
+      });
 
     } catch (error) {
       console.warn('Error setting up cytoscape events:', error);
-      // Ensure batch is ended even if setup fails
-      if (isMountedRef.current && cyRef.current) {
-        try {
-          cyRef.current.endBatch();
-        } catch (batchError) {
-          console.warn('Error ending batch after setup error:', batchError);
-        }
-      }
     }
-
-    // Return cleanup function
-    return () => {
-      if (cyRef.current) {
-        try {
-          cyRef.current.removeAllListeners();
-          cyRef.current.destroy();
-        } catch (error) {
-          console.warn('Error in cleanup function:', error);
-        }
-      }
-      cyRef.current = null;
-    };
   }, [onNodeSelect, onEdgeSelect, selectedLayout]);
 
   // Control functions
@@ -811,22 +759,33 @@ const GraphVisualization: React.FC<GraphVisualizationProps> = ({
         position: 'relative',
         flex: isFullscreen ? 1 : 'none'
       }}>
-        <CytoscapeComponent
-          elements={[...filteredGraphData.nodes, ...filteredGraphData.edges]}
-          style={{ width: '100%', height: '100%' }}
-          stylesheet={cytoscapeStylesheet}
-          cy={handleCytoscapeEvents}
-          layout={{
-            name: selectedLayout,
-            animate: true,
-            fit: true,
-            padding: 50,
-          }}
-          autoungrabify={false}
-          autounselectify={false}
-          boxSelectionEnabled={true}
-          wheelSensitivity={0.2}
-        />
+        {(() => {
+          const elements = [...filteredGraphData.nodes, ...filteredGraphData.edges];
+          console.log('Cytoscape elements:', {
+            total: elements.length,
+            nodes: filteredGraphData.nodes.length,
+            edges: filteredGraphData.edges.length,
+            firstNode: filteredGraphData.nodes[0]?.data,
+            firstEdge: filteredGraphData.edges[0]?.data
+          });
+          return (
+            <CytoscapeComponent
+              elements={elements}
+              style={{ width: '100%', height: '100%' }}
+              stylesheet={cytoscapeStylesheet}
+              cy={handleCytoscapeEvents}
+              layout={{
+                name: selectedLayout,
+                animate: true,
+                fit: true,
+                padding: 50,
+              }}
+              autoungrabify={false}
+              autounselectify={false}
+              boxSelectionEnabled={true}
+            />
+          );
+        })()}
       </Paper>
     </Box>
   );
