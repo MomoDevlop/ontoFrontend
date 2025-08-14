@@ -60,9 +60,13 @@ import SearchBar from '../../components/Common/SearchBar';
 import { 
   instrumentsApi, 
   famillesApi, 
+  groupesEthniquesApi,
+  artisansApi,
   relationsApi,
   Instrument, 
   Famille,
+  GroupeEthnique,
+  Artisan,
   ApiListResponse 
 } from '../../services/api';
 
@@ -89,6 +93,8 @@ const InstrumentsPage: React.FC = () => {
   const location = useLocation();
   const [instruments, setInstruments] = useState<Instrument[]>([]);
   const [familles, setFamilles] = useState<Famille[]>([]);
+  const [groupesEthniques, setGroupesEthniques] = useState<GroupeEthnique[]>([]);
+  const [artisans, setArtisans] = useState<Artisan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
@@ -96,6 +102,8 @@ const InstrumentsPage: React.FC = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFamily, setSelectedFamily] = useState<string>('');
+  const [selectedGroupeEthnique, setSelectedGroupeEthnique] = useState<string>('');
+  const [selectedArtisan, setSelectedArtisan] = useState<string>('');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [yearFrom, setYearFrom] = useState<string>('');
   const [yearTo, setYearTo] = useState<string>('');
@@ -167,7 +175,9 @@ const InstrumentsPage: React.FC = () => {
   useEffect(() => {
     loadInstruments();
     loadFamilles();
-  }, [page, rowsPerPage, searchQuery, selectedFamily]);
+    loadGroupesEthniques();
+    loadArtisans();
+  }, [page, rowsPerPage, searchQuery, selectedFamily, selectedGroupeEthnique, selectedArtisan, yearFrom, yearTo]);
 
   /**
    * Handle URL parameters for direct navigation to instrument details using custom hook
@@ -209,6 +219,17 @@ const InstrumentsPage: React.FC = () => {
    * Load instruments with filters and pagination
    */
   const loadInstruments = async () => {
+    console.log('🔄 loadInstruments called with filters:', {
+      searchQuery,
+      selectedFamily,
+      selectedGroupeEthnique,
+      selectedArtisan,
+      yearFrom,
+      yearTo,
+      page,
+      rowsPerPage
+    });
+    
     setLoading(true);
     setError(null);
 
@@ -216,34 +237,44 @@ const InstrumentsPage: React.FC = () => {
       const params = {
         page: page + 1,
         limit: rowsPerPage,
-        filters: {
-          ...(searchQuery && { nomInstrument: searchQuery }),
-          ...(selectedFamily && { famille: selectedFamily }),
-          ...(yearFrom && { anneeMin: parseInt(yearFrom) }),
-          ...(yearTo && { anneeMax: parseInt(yearTo) }),
-        },
+        ...(searchQuery && { search: searchQuery }),
+        ...(selectedFamily && { famille: selectedFamily }),
+        ...(selectedGroupeEthnique && { groupeEthnique: selectedGroupeEthnique }),
+        ...(selectedArtisan && { artisan: selectedArtisan }),
+        ...(yearFrom && { anneeMin: parseInt(yearFrom) }),
+        ...(yearTo && { anneeMax: parseInt(yearTo) }),
       };
 
+      console.log('📡 API call params:', params);
       const response = await instrumentsApi.getAll(params);
+      console.log('📥 API response:', response);
       
       if (response.success) {
-        // Handle different response structures safely
-        const data = response.data?.data || response.data || [];
-        const instruments = Array.isArray(data) ? data : [];
+        // Handle the smart API response structure
+        const instruments = Array.isArray(response.data) 
+          ? response.data 
+          : (response.data?.data ? response.data.data : []);
+        
+        console.log('✅ Frontend: Setting instruments:', instruments.length, 'items');
         setInstruments(instruments);
-        setTotalCount(
-          response.pagination?.total || 
-          response.data?.total || 
-          instruments.length || 
-          0
-        );
+        
+        const totalCount = response.total || 
+                          response.data?.total || 
+                          response.pagination?.total || 
+                          instruments.length || 
+                          0;
+        
+        console.log('📊 Frontend: Setting totalCount:', totalCount);
+        setTotalCount(totalCount);
       } else {
+        console.error('❌ API error:', response.error);
         setError(response.error || 'Erreur lors du chargement des instruments');
       }
     } catch (err) {
-      console.error('Error loading instruments:', err);
+      console.error('💥 Exception in loadInstruments:', err);
       setError('Erreur lors du chargement des instruments');
     } finally {
+      console.log('✨ Setting loading to false');
       setLoading(false);
     }
   };
@@ -262,6 +293,40 @@ const InstrumentsPage: React.FC = () => {
       }
     } catch (err) {
       console.error('Error loading families:', err);
+    }
+  };
+
+  /**
+   * Load groupes ethniques for filtering
+   */
+  const loadGroupesEthniques = async () => {
+    try {
+      const response = await groupesEthniquesApi.getAll({ limit: 100 });
+      if (response.success) {
+        // Handle different response structures safely
+        const data = response.data?.data || response.data || [];
+        const groupes = Array.isArray(data) ? data : [];
+        setGroupesEthniques(groupes);
+      }
+    } catch (err) {
+      console.error('Error loading ethnic groups:', err);
+    }
+  };
+
+  /**
+   * Load artisans for filtering
+   */
+  const loadArtisans = async () => {
+    try {
+      const response = await artisansApi.getAll({ limit: 100 });
+      if (response.success) {
+        // Handle different response structures safely
+        const data = response.data?.data || response.data || [];
+        const artisans = Array.isArray(data) ? data : [];
+        setArtisans(artisans);
+      }
+    } catch (err) {
+      console.error('Error loading artisans:', err);
     }
   };
 
@@ -292,7 +357,25 @@ const InstrumentsPage: React.FC = () => {
    * Handle family filter change
    */
   const handleFamilyFilterChange = (family: string) => {
+    console.log('🎯 Family filter changed to:', family);
     setSelectedFamily(family);
+    setPage(0);
+  };
+
+  /**
+   * Handle groupe ethnique filter change
+   */
+  const handleGroupeEthniqueFilterChange = (groupe: string) => {
+    console.log('🌍 Groupe ethnique filter changed to:', groupe);
+    setSelectedGroupeEthnique(groupe);
+    setPage(0);
+  };
+
+  /**
+   * Handle artisan filter change
+   */
+  const handleArtisanFilterChange = (artisan: string) => {
+    setSelectedArtisan(artisan);
     setPage(0);
   };
 
@@ -302,6 +385,8 @@ const InstrumentsPage: React.FC = () => {
   const handleClearFilters = () => {
     setSearchQuery('');
     setSelectedFamily('');
+    setSelectedGroupeEthnique('');
+    setSelectedArtisan('');
     setYearFrom('');
     setYearTo('');
     setPage(0);
@@ -643,6 +728,9 @@ const InstrumentsPage: React.FC = () => {
                 </Typography>
                 <Typography variant="body2" sx={{ opacity: 0.8 }}>
                   {familles.length > 0 ? `Répartis dans ${familles.length} familles` : 'Chargement des familles...'}
+                  {groupesEthniques.length > 0 && (
+                    <span> • {groupesEthniques.length} groupes ethniques • {artisans.length} artisans</span>
+                  )}
                 </Typography>
               </Grid>
               <Grid item>
@@ -681,8 +769,9 @@ const InstrumentsPage: React.FC = () => {
 
       {/* Search and Filters */}
       <Paper sx={{ p: 3, mb: 3 }}>
-        <Grid container spacing={3} alignItems="center">
-          <Grid item xs={12} md={6}>
+        <Grid container spacing={2} alignItems="center">
+          {/* Search Bar */}
+          <Grid item xs={12} lg={4}>
             <SearchBar
               placeholder="Rechercher par nom d'instrument..."
               onSearch={handleSearch}
@@ -690,8 +779,10 @@ const InstrumentsPage: React.FC = () => {
               enableAutocomplete={false}
             />
           </Grid>
-          <Grid item xs={12} md={3}>
-            <FormControl fullWidth>
+          
+          {/* Famille Filter */}
+          <Grid item xs={12} sm={6} md={4} lg={2}>
+            <FormControl fullWidth size="small">
               <InputLabel>Famille</InputLabel>
               <Select
                 value={selectedFamily}
@@ -699,7 +790,7 @@ const InstrumentsPage: React.FC = () => {
                 onChange={(e) => handleFamilyFilterChange(e.target.value)}
                 label="Famille"
               >
-                <MenuItem value="">Toutes les familles</MenuItem>
+                <MenuItem value="">Toutes</MenuItem>
                 {familles && familles.length > 0 ? familles.map((famille) => (
                   <MenuItem key={famille.id} value={famille.nomFamille}>
                     {famille.nomFamille}
@@ -708,26 +799,82 @@ const InstrumentsPage: React.FC = () => {
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} md={3}>
-            <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end', alignItems: 'center' }}>
+          
+          {/* Groupe Ethnique Filter */}
+          <Grid item xs={12} sm={6} md={4} lg={2}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Groupe Ethnique</InputLabel>
+              <Select
+                value={selectedGroupeEthnique}
+                // @ts-ignore
+                onChange={(e) => handleGroupeEthniqueFilterChange(e.target.value)}
+                label="Groupe Ethnique"
+              >
+                <MenuItem value="">Tous</MenuItem>
+                {groupesEthniques && groupesEthniques.length > 0 ? groupesEthniques.map((groupe) => (
+                  <MenuItem key={groupe.id} value={groupe.nomGroupe}>
+                    {groupe.nomGroupe} ({groupe.langue})
+                  </MenuItem>
+                )) : null}
+              </Select>
+            </FormControl>
+          </Grid>
+          
+          {/* Artisan Filter */}
+          <Grid item xs={12} sm={6} md={4} lg={2}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Artisan</InputLabel>
+              <Select
+                value={selectedArtisan}
+                // @ts-ignore
+                onChange={(e) => handleArtisanFilterChange(e.target.value)}
+                label="Artisan"
+              >
+                <MenuItem value="">Tous</MenuItem>
+                {artisans && artisans.length > 0 ? artisans.map((artisan) => (
+                  <MenuItem key={artisan.id} value={artisan.nomArtisan}>
+                    {artisan.nomArtisan}
+                  </MenuItem>
+                )) : null}
+              </Select>
+            </FormControl>
+          </Grid>
+          
+          {/* Actions */}
+          <Grid item xs={12} sm={6} md={8} lg={2}>
+            <Box sx={{ 
+              display: 'flex', 
+              gap: 1, 
+              justifyContent: { xs: 'stretch', lg: 'flex-end' }, 
+              alignItems: 'center',
+              flexDirection: { xs: 'column', sm: 'row', lg: 'column', xl: 'row' }
+            }}>
               <Button
                 variant={showAdvancedFilters ? 'contained' : 'outlined'}
                 size="small"
                 startIcon={<FilterList />}
                 onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                // @ts-ignore
+                fullWidth={{ xs: true, sm: false, lg: true, xl: false }}
               >
-                Filtres
+                Filtres avancés
               </Button>
               <Button
                 variant="outlined"
                 size="small"
                 onClick={handleClearFilters}
-                disabled={!searchQuery && !selectedFamily && !yearFrom && !yearTo}
+                disabled={!searchQuery && !selectedFamily && !selectedGroupeEthnique && !selectedArtisan && !yearFrom && !yearTo}
+                // @ts-ignore
+                fullWidth={{ xs: true, sm: false, lg: true, xl: false }}
               >
                 Effacer
               </Button>
             </Box>
-            <Box sx={{ textAlign: 'right', mt: 1 }}>
+            <Box sx={{ 
+              textAlign: { xs: 'center', lg: 'right' }, 
+              mt: 1,
+              display: { xs: 'none', sm: 'block' }
+            }}>
               <Typography variant="h6" color="primary">
                 {totalCount}
               </Typography>
@@ -738,14 +885,35 @@ const InstrumentsPage: React.FC = () => {
           </Grid>
         </Grid>
         
+        {/* Results counter for mobile */}
+        <Box sx={{ 
+          display: { xs: 'block', sm: 'none' }, 
+          textAlign: 'center',
+          mt: 2,
+          p: 2,
+          backgroundColor: 'grey.50',
+          borderRadius: 1
+        }}>
+          <Typography variant="h6" color="primary">
+            {totalCount} résultat{totalCount > 1 ? 's' : ''}
+          </Typography>
+        </Box>
+        
         {/* Advanced Filters */}
-        {showAdvancedFilters && (
-          <Box sx={{ mt: 2, p: 2, border: 1, borderColor: 'divider', borderRadius: 1 }}>
-            <Typography variant="subtitle2" gutterBottom>
-              Filtres avancés
+        <Collapse in={showAdvancedFilters}>
+          <Box sx={{ 
+            mt: 2, 
+            p: 2, 
+            border: 1, 
+            borderColor: 'divider', 
+            borderRadius: 1,
+            backgroundColor: 'grey.50'
+          }}>
+            <Typography variant="subtitle2" gutterBottom color="primary" sx={{ fontWeight: 600 }}>
+              Filtres avancés par année
             </Typography>
             <Grid container spacing={2} alignItems="center">
-              <Grid item xs={12} sm={4}>
+              <Grid item xs={12} sm={6} md={4}>
                 <TextField
                   fullWidth
                   label="Année minimum"
@@ -755,9 +923,10 @@ const InstrumentsPage: React.FC = () => {
                   // @ts-ignore
                   onChange={(e) => setYearFrom(e.target.value)}
                   inputProps={{ min: 1, max: new Date().getFullYear() }}
+                  placeholder="Ex: 1900"
                 />
               </Grid>
-              <Grid item xs={12} sm={4}>
+              <Grid item xs={12} sm={6} md={4}>
                 <TextField
                   fullWidth
                   label="Année maximum"
@@ -767,20 +936,73 @@ const InstrumentsPage: React.FC = () => {
                   // @ts-ignore
                   onChange={(e) => setYearTo(e.target.value)}
                   inputProps={{ min: 1, max: new Date().getFullYear() }}
+                  placeholder="Ex: 2024"
                 />
               </Grid>
-              <Grid item xs={12} sm={4}>
+              <Grid item xs={12} md={4}>
                 <Button
                   variant="contained"
                   onClick={handleApplyFilters}
                   fullWidth
+                  size="small"
                 >
-                  Appliquer les filtres
+                  Appliquer les filtres d'année
                 </Button>
               </Grid>
             </Grid>
+            
+            {/* Active filters summary */}
+            {(selectedFamily || selectedGroupeEthnique || selectedArtisan || yearFrom || yearTo) && (
+              <Box sx={{ mt: 2, pt: 2, borderTop: 1, borderColor: 'divider' }}>
+                <Typography variant="caption" color="text.secondary" gutterBottom>
+                  Filtres actifs :
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  {selectedFamily && (
+                    <Chip 
+                      label={`Famille: ${selectedFamily}`} 
+                      size="small" 
+                      onDelete={() => handleFamilyFilterChange('')}
+                      color="primary"
+                      variant="outlined"
+                    />
+                  )}
+                  {selectedGroupeEthnique && (
+                    <Chip 
+                      label={`Groupe: ${selectedGroupeEthnique}`} 
+                      size="small" 
+                      onDelete={() => handleGroupeEthniqueFilterChange('')}
+                      color="secondary"
+                      variant="outlined"
+                    />
+                  )}
+                  {selectedArtisan && (
+                    <Chip 
+                      label={`Artisan: ${selectedArtisan}`} 
+                      size="small" 
+                      onDelete={() => handleArtisanFilterChange('')}
+                      color="info"
+                      variant="outlined"
+                    />
+                  )}
+                  {(yearFrom || yearTo) && (
+                    <Chip 
+                      label={`Années: ${yearFrom || '...'} - ${yearTo || '...'}`} 
+                      size="small" 
+                      onDelete={() => {
+                        setYearFrom('');
+                        setYearTo('');
+                        setPage(0);
+                      }}
+                      color="warning"
+                      variant="outlined"
+                    />
+                  )}
+                </Box>
+              </Box>
+            )}
           </Box>
-        )}
+        </Collapse>
       </Paper>
 
       {/* Bulk Actions Bar */}
@@ -814,21 +1036,26 @@ const InstrumentsPage: React.FC = () => {
       </Collapse>
 
       {/* Instruments Table */}
-      <TableContainer component={Paper} sx={{ boxShadow: 3 }}>
-        <Table>
+      <TableContainer component={Paper} sx={{ 
+        boxShadow: 3,
+        maxHeight: { xs: '70vh', md: 'none' },
+        overflow: 'auto'
+      }}>
+        <Table stickyHeader>
           <TableHead>
             <TableRow sx={{ backgroundColor: 'grey.50' }}>
-              <TableCell sx={{ fontWeight: 'bold', width: '48px' }}>
+              <TableCell sx={{ fontWeight: 'bold', width: { xs: '40px', md: '48px' } }}>
                 <Checkbox
                   checked={instruments.length > 0 && selectedInstruments.length === instruments.length}
                   indeterminate={selectedInstruments.length > 0 && selectedInstruments.length < instruments.length}
                   onChange={handleSelectAll}
+                  size="small"
                 />
               </TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Nom</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Description</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Année de Création</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold' }}>Actions</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', minWidth: { xs: '120px', md: '150px' } }}>Nom</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', display: { xs: 'none', md: 'table-cell' }, minWidth: '200px' }}>Description</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', minWidth: { xs: '80px', md: '120px' } }}>Année</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 'bold', minWidth: { xs: '100px', md: '160px' } }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -838,19 +1065,40 @@ const InstrumentsPage: React.FC = () => {
                   <Checkbox
                     checked={selectedInstruments.includes(instrument.id)}
                     onChange={() => handleSelectInstrument(instrument.id)}
+                    size="small"
                   />
                 </TableCell>
                 <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <MusicNote sx={{ mr: 1, color: 'primary.main' }} />
-                    <Typography variant="subtitle2">
-                      {instrument.nomInstrument}
-                    </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', flexDirection: { xs: 'column', md: 'row' } }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 0.5, md: 0 } }}>
+                      <MusicNote sx={{ mr: 1, color: 'primary.main', fontSize: { xs: '1.2rem', md: '1.5rem' } }} />
+                      <Typography variant="subtitle2" sx={{ fontSize: { xs: '0.875rem', md: '1rem' } }}>
+                        {instrument.nomInstrument}
+                      </Typography>
+                    </Box>
+                    {/* Show description on mobile below the name */}
+                    <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                        {instrument.description ? 
+                          (instrument.description.length > 50 ? 
+                            `${instrument.description.substring(0, 50)}...` : 
+                            instrument.description
+                          ) : 
+                          'Aucune description'
+                        }
+                      </Typography>
+                    </Box>
                   </Box>
                 </TableCell>
-                <TableCell>
+                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                   <Typography variant="body2" color="text.secondary">
-                    {instrument.description || 'Aucune description'}
+                    {instrument.description ? 
+                      (instrument.description.length > 100 ? 
+                        `${instrument.description.substring(0, 100)}...` : 
+                        instrument.description
+                      ) : 
+                      'Aucune description'
+                    }
                   </Typography>
                 </TableCell>
                 <TableCell>
@@ -858,57 +1106,71 @@ const InstrumentsPage: React.FC = () => {
                     <Chip 
                       label={instrument.anneeCreation} 
                       size="small" 
-                      variant="outlined" 
+                      variant="outlined"
+                      sx={{ fontSize: { xs: '0.75rem', md: '0.8125rem' } }}
                     />
                   ) : (
-                    <Typography variant="body2" color="text.secondary">
-                      Non spécifiée
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
+                      N/A
                     </Typography>
                   )}
                 </TableCell>
                 <TableCell align="right">
-                  <Tooltip title="Voir les détails">
-                    <IconButton 
-                      onClick={() => handleView(instrument)}
-                      size="small"
-                    >
-                      <Visibility />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Modifier">
-                    <IconButton 
-                      onClick={() => handleEdit(instrument)}
-                      size="small"
-                    >
-                      <Edit />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Voir les relations">
-                    <IconButton 
-                      onClick={() => handleViewRelations(instrument)}
-                      size="small"
-                      color="info"
-                    >
-                      <Timeline />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Supprimer">
-                    <IconButton 
-                      onClick={() => handleDelete(instrument)}
-                      size="small"
-                      color="error"
-                    >
-                      <Delete />
-                    </IconButton>
-                  </Tooltip>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'flex-end', 
+                    gap: { xs: 0, md: 0.5 },
+                    flexWrap: { xs: 'wrap', md: 'nowrap' }
+                  }}>
+                    <Tooltip title="Voir les détails">
+                      <IconButton 
+                        onClick={() => handleView(instrument)}
+                        size="small"
+                      >
+                        <Visibility fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Modifier">
+                      <IconButton 
+                        onClick={() => handleEdit(instrument)}
+                        size="small"
+                      >
+                        <Edit fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Relations" sx={{ display: { xs: 'none', sm: 'block' } }}>
+                      <IconButton 
+                        onClick={() => handleViewRelations(instrument)}
+                        size="small"
+                        color="info"
+                      >
+                        <Timeline fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Supprimer">
+                      <IconButton 
+                        onClick={() => handleDelete(instrument)}
+                        size="small"
+                        color="error"
+                      >
+                        <Delete fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
                 </TableCell>
               </TableRow>
             )) : (
               <TableRow>
-                <TableCell colSpan={5} align="center">
-                  <Typography variant="body2" color="text.secondary">
-                    Aucun instrument trouvé
-                  </Typography>
+                <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                  <Box sx={{ textAlign: 'center' }}>
+                    <MusicNote sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                    <Typography variant="h6" color="text.secondary" gutterBottom>
+                      Aucun instrument trouvé
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Essayez de modifier vos critères de recherche ou de supprimer des filtres.
+                    </Typography>
+                  </Box>
                 </TableCell>
               </TableRow>
             )}

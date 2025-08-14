@@ -318,8 +318,123 @@ function createCrudService<T>(endpoint: string): CrudService<T> {
   };
 }
 
-// Entity services
-export const instrumentsApi = createCrudService<Instrument>('/instruments');
+// Instruments API with smart filtering
+export const instrumentsApi = {
+  ...createCrudService<Instrument>('/instruments'),
+  
+  // Override getAll to use working endpoints
+  async getAll(params: ListParams = {}): Promise<ApiListResponse<Instrument>> {
+    return withRateLimit('instruments-getAll', async () => {
+      try {
+        console.log('🔧 Smart instrumentsApi.getAll called with params:', params);
+        
+        // Check for specific filters and use working endpoints
+        const filters = params.filters || {};
+        const famille = params.famille || filters.famille;
+        const groupeEthnique = params.groupeEthnique || filters.groupeEthnique;
+        const artisan = params.artisan || filters.artisan;
+        const search = params.search;
+        
+        let response: AxiosResponse<any>;
+        
+        if (search) {
+          console.log('🔍 Using search:', search);
+          response = await apiClient.get('/instruments', { params });
+        } else if (famille && !groupeEthnique && !artisan) {
+          console.log('🎯 Using by-family endpoint for:', famille);
+          response = await apiClient.get(`/instruments/by-family/${encodeURIComponent(famille)}`);
+          
+          // Transform response to match expected format
+          if (response.data.success) {
+            const instruments = response.data.data.map((item: any) => item.instrument);
+            const page = parseInt(params.page as string) || 1;
+            const limit = parseInt(params.limit as string) || 10;
+            const startIndex = (page - 1) * limit;
+            const endIndex = startIndex + limit;
+            const paginatedData = instruments.slice(startIndex, endIndex);
+            
+            return {
+              success: true,
+              data: {
+                data: paginatedData,
+                total: instruments.length
+              },
+              pagination: {
+                page,
+                limit,
+                total: instruments.length
+              }
+            };
+          }
+        } else if (groupeEthnique && !famille && !artisan) {
+          console.log('🌍 Using by-group endpoint for:', groupeEthnique);
+          response = await apiClient.get(`/instruments/by-group/${encodeURIComponent(groupeEthnique)}`);
+          
+          // Transform response to match expected format
+          if (response.data.success) {
+            const instruments = response.data.data.map((item: any) => item.instrument);
+            const page = parseInt(params.page as string) || 1;
+            const limit = parseInt(params.limit as string) || 10;
+            const startIndex = (page - 1) * limit;
+            const endIndex = startIndex + limit;
+            const paginatedData = instruments.slice(startIndex, endIndex);
+            
+            return {
+              success: true,
+              data: {
+                data: paginatedData,
+                total: instruments.length
+              },
+              pagination: {
+                page,
+                limit,
+                total: instruments.length
+              }
+            };
+          }
+        } else if (artisan && !famille && !groupeEthnique) {
+          console.log('👨‍🎨 Using by-artisan endpoint for:', artisan);
+          response = await apiClient.get(`/instruments/by-artisan/${encodeURIComponent(artisan)}`);
+          
+          // Transform response to match expected format
+          if (response.data.success) {
+            const instruments = response.data.data.map((item: any) => item.instrument);
+            const page = parseInt(params.page as string) || 1;
+            const limit = parseInt(params.limit as string) || 10;
+            const startIndex = (page - 1) * limit;
+            const endIndex = startIndex + limit;
+            const paginatedData = instruments.slice(startIndex, endIndex);
+            
+            return {
+              success: true,
+              data: {
+                data: paginatedData,
+                total: instruments.length
+              },
+              pagination: {
+                page,
+                limit,
+                total: instruments.length
+              }
+            };
+          }
+        } else {
+          console.log('📋 Using default endpoint');
+          response = await apiClient.get('/instruments', { params });
+        }
+        
+        return response.data;
+      } catch (error: any) {
+        console.error('Error in smart instrumentsApi.getAll:', error);
+        return {
+          success: false,
+          error: error.message || 'Failed to fetch instruments',
+          data: { data: [], total: 0 }
+        };
+      }
+    });
+  }
+};
 export const famillesApi = createCrudService<Famille>('/familles');
 export const groupesEthniquesApi = createCrudService<GroupeEthnique>('/groupes-ethniques');
 export const localitesApi = createCrudService<Localite>('/localites');
